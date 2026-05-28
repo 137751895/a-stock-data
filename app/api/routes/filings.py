@@ -7,6 +7,6 @@ router = APIRouter()
 
 
 @router.get("/announcements/{code}")
-async def announcements(code: str):
+def announcements(code: str):
     data = get_announcements(code)
     return success_response(data=data, source=["cninfo"])

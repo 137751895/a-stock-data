@@ -1,6 +1,6 @@
-import urllib.request
-
+from app.core.http import http_get
 from app.core.normalize import to_tencent_symbol
+from app.core.errors import UpstreamSchemaError
 
 
 def fetch_quotes(codes: list[str]) -> dict[str, dict]:
@@ -10,10 +10,11 @@ def fetch_quotes(codes: list[str]) -> dict[str, dict]:
     """
     symbols = [to_tencent_symbol(c) for c in codes]
     url = "https://qt.gtimg.cn/q=" + ",".join(symbols)
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", "Mozilla/5.0")
-    resp = urllib.request.urlopen(req, timeout=10)
-    data = resp.read().decode("gbk")
+    r = http_get(url, timeout=10, provider="tencent")
+    try:
+        data = r.content.decode("gbk")
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to decode Tencent response: {e}", provider="tencent")
 
     return parse_tencent_response(data)
 

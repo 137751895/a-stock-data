@@ -7,6 +7,6 @@ router = APIRouter()
 
 
 @router.get("/reports/{code}")
-async def reports(code: str):
+def reports(code: str):
     data = get_reports(code)
     return success_response(data=data, source=["eastmoney"])

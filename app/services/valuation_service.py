@@ -1,5 +1,5 @@
 
-from app.core.normalize import normalize_code
+from app.core.normalize import validate_code
 from app.domain.parsing import parse_ths_eps_table, extract_eps_from_df
 from app.domain.valuation import forward_pe, pe_digestion, calc_peg
 from app.providers.tencent import fetch_quotes
@@ -12,7 +12,7 @@ def get_valuation(code: str) -> dict:
     Aggregates Tencent quote + THS EPS forecast + valuation calculations.
     Returns partial results with warnings if some sources fail.
     """
-    code = normalize_code(code)
+    code = validate_code(code)
     warnings = []
     result = {"code": code}
 
@@ -33,9 +33,8 @@ def get_valuation(code: str) -> dict:
     eps_data = {"eps_cur": None, "eps_next": None, "analyst_count": 0}
     try:
         ths_result = fetch_eps_forecast(code)
-        if ths_result["status_code"] == 200:
-            df = parse_ths_eps_table(ths_result["html"])
-            eps_data = extract_eps_from_df(df)
+        df = parse_ths_eps_table(ths_result["html"])
+        eps_data = extract_eps_from_df(df)
     except Exception as e:
         warnings.append(f"Failed to fetch EPS forecast: {e}")
 

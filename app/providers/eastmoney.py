@@ -1,5 +1,6 @@
 from app.core.http import http_get
 from app.core.normalize import to_eastmoney_secid
+from app.core.errors import UpstreamSchemaError
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 DATACENTER_URL = "https://datacenter-web.eastmoney.com/api/data/v1/get"
@@ -15,8 +16,11 @@ def fetch_stock_info(code: str) -> dict:
         "fields": "f57,f58,f84,f85,f127,f116,f117,f189,f43",
         "secid": secid,
     }
-    r = http_get(url, params=params)
-    d = r.json().get("data", {}) or {}
+    r = http_get(url, params=params, provider="eastmoney")
+    try:
+        d = r.json().get("data", {}) or {}
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to parse stock info response: {e}", provider="eastmoney")
     return {
         "code": d.get("f57", ""),
         "name": d.get("f58", ""),
@@ -45,8 +49,11 @@ def eastmoney_datacenter(report_name: str, columns: str = "ALL",
         "source": "WEB",
         "client": "WEB",
     }
-    r = http_get(DATACENTER_URL, params=params)
-    d = r.json()
+    r = http_get(DATACENTER_URL, params=params, provider="eastmoney")
+    try:
+        d = r.json()
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to parse datacenter response: {e}", provider="eastmoney")
     if d.get("result") and d["result"].get("data"):
         return d["result"]["data"]
     return []
@@ -67,8 +74,13 @@ def fetch_reports(code: str, max_pages: int = 5) -> list[dict]:
             "orgCode": "", "code": code, "rcode": "",
             "p": str(page), "pageNum": str(page), "pageNumber": str(page),
         }
-        r = http_get(report_api, params=params, headers={"Referer": "https://data.eastmoney.com/"}, timeout=30)
-        d = r.json()
+        r = http_get(report_api, params=params,
+                     headers={"Referer": "https://data.eastmoney.com/"},
+                     timeout=30, provider="eastmoney")
+        try:
+            d = r.json()
+        except Exception as e:
+            raise UpstreamSchemaError(f"Failed to parse reports response: {e}", provider="eastmoney")
         rows = d.get("data") or []
         if not rows:
             break
@@ -93,11 +105,11 @@ def fetch_fund_flow_minute(code: str) -> list[dict]:
         "Referer": "https://quote.eastmoney.com/",
         "Origin": "https://quote.eastmoney.com",
     }
+    r = http_get(url, params=params, headers=headers, provider="eastmoney")
     try:
-        r = http_get(url, params=params, headers=headers)
         d = r.json()
-    except Exception:
-        return []
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to parse fund flow response: {e}", provider="eastmoney")
 
     rows = []
     for line in d.get("data", {}).get("klines", []):
@@ -154,10 +166,15 @@ def fetch_stock_news(code: str, page_size: int = 20) -> list[dict]:
     params = {"cb": cb, "param": inner_params}
     headers = {"Referer": "https://so.eastmoney.com/"}
 
-    r = http_get(url, params=params, headers=headers)
+    r = http_get(url, params=params, headers=headers, provider="eastmoney")
     text = r.text
-    json_str = text[text.index("(") + 1: text.rindex(")")]
-    d = json.loads(json_str)
+    try:
+        start = text.index("(")
+        end = text.rindex(")")
+        json_str = text[start + 1: end]
+        d = json.loads(json_str)
+    except (ValueError, json.JSONDecodeError) as e:
+        raise UpstreamSchemaError(f"Failed to parse JSONP response: {e}", provider="eastmoney")
 
     rows = []
     articles = d.get("result", {}).get("cmsArticleWebOld", {}).get("list", [])

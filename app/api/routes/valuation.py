@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 @router.get("/valuation/{code}")
-async def valuation(code: str):
+def valuation(code: str):
     result = get_valuation(code)
     return success_response(
         data=result["data"],

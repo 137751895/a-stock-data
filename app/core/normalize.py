@@ -1,5 +1,7 @@
 import re
 
+from app.core.errors import ValidationError as AppValidationError
+
 
 def normalize_code(code: str) -> str:
     """Normalize stock code to pure 6-digit format.
@@ -20,6 +22,14 @@ def normalize_code(code: str) -> str:
     if match:
         return match.group(1)
     return code
+
+
+def validate_code(code: str) -> str:
+    """Normalize and validate a stock code. Raises ValidationError if invalid."""
+    normalized = normalize_code(code)
+    if not re.match(r"^\d{6}$", normalized):
+        raise AppValidationError(f"Invalid stock code: '{code}'. Expected 6-digit code like 600519, SH600519, or 600519.SH")
+    return normalized
 
 
 def get_prefix(code: str) -> str:

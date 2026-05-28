@@ -13,7 +13,7 @@ MOCK_QUOTES = {
     }
 }
 
-MOCK_THS = {"html": "", "status_code": 200}
+MOCK_THS = {"html": ""}
 
 
 @patch("app.services.valuation_service.fetch_quotes", return_value=MOCK_QUOTES)

@@ -1,6 +1,7 @@
 import requests
 
 from app.core.config import settings
+from app.core.errors import UpstreamHTTPError
 
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
@@ -22,20 +23,45 @@ def get_session() -> requests.Session:
 
 
 def http_get(url: str, params: dict | None = None, headers: dict | None = None,
-             timeout: int | None = None) -> requests.Response:
+             timeout: int | None = None, provider: str = "unknown") -> requests.Response:
     s = get_session()
     t = timeout or settings.default_http_timeout
     merged_headers = dict(s.headers)
     if headers:
         merged_headers.update(headers)
-    return s.get(url, params=params, headers=merged_headers, timeout=t)
+    try:
+        resp = s.get(url, params=params, headers=merged_headers, timeout=t)
+    except requests.exceptions.Timeout:
+        raise UpstreamHTTPError(f"Request timed out after {t}s: {url}", provider=provider)
+    except requests.exceptions.ConnectionError:
+        raise UpstreamHTTPError(f"Connection error: {url}", provider=provider)
+    except requests.exceptions.RequestException as e:
+        raise UpstreamHTTPError(f"Request failed: {e}", provider=provider)
+    if resp.status_code != 200:
+        raise UpstreamHTTPError(
+            f"HTTP {resp.status_code} from {url}", provider=provider
+        )
+    return resp
 
 
 def http_post(url: str, data: dict | None = None, json: dict | None = None,
-              headers: dict | None = None, timeout: int | None = None) -> requests.Response:
+              headers: dict | None = None, timeout: int | None = None,
+              provider: str = "unknown") -> requests.Response:
     s = get_session()
     t = timeout or settings.default_http_timeout
     merged_headers = dict(s.headers)
     if headers:
         merged_headers.update(headers)
-    return s.post(url, data=data, json=json, headers=merged_headers, timeout=t)
+    try:
+        resp = s.post(url, data=data, json=json, headers=merged_headers, timeout=t)
+    except requests.exceptions.Timeout:
+        raise UpstreamHTTPError(f"Request timed out after {t}s: {url}", provider=provider)
+    except requests.exceptions.ConnectionError:
+        raise UpstreamHTTPError(f"Connection error: {url}", provider=provider)
+    except requests.exceptions.RequestException as e:
+        raise UpstreamHTTPError(f"Request failed: {e}", provider=provider)
+    if resp.status_code != 200:
+        raise UpstreamHTTPError(
+            f"HTTP {resp.status_code} from {url}", provider=provider
+        )
+    return resp

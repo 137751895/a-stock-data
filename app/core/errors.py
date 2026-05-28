@@ -31,7 +31,7 @@ class ProviderAuthError(AppError):
         super().__init__(code="PROVIDER_AUTH_ERROR", message=message, status_code=403, provider=provider)
 
 
-async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     error_body: dict = {"code": exc.code, "message": exc.message}
     if exc.provider:
         error_body["provider"] = exc.provider

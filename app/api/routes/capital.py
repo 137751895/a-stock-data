@@ -7,12 +7,12 @@ router = APIRouter()
 
 
 @router.get("/fund-flow/minute/{code}")
-async def fund_flow_minute(code: str):
+def fund_flow_minute(code: str):
     data = get_fund_flow_minute(code)
     return success_response(data=data, source=["eastmoney"])
 
 
 @router.get("/margin/{code}")
-async def margin(code: str):
+def margin(code: str):
     data = get_margin_trading(code)
     return success_response(data=data, source=["eastmoney"])

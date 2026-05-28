@@ -2,6 +2,7 @@ from datetime import datetime
 
 from app.core.http import http_post
 from app.core.normalize import normalize_code, to_cninfo_org_id
+from app.core.errors import UpstreamSchemaError
 
 
 def _cninfo_ts_to_date(ts) -> str:
@@ -37,8 +38,11 @@ def fetch_announcements(code: str, page_size: int = 30) -> list[dict]:
         "Referer": "https://www.cninfo.com.cn/new/disclosure",
         "Origin": "https://www.cninfo.com.cn",
     }
-    r = http_post(url, data=payload, headers=headers)
-    d = r.json()
+    r = http_post(url, data=payload, headers=headers, provider="cninfo")
+    try:
+        d = r.json()
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to parse CNInfo response: {e}", provider="cninfo")
 
     rows = []
     for item in d.get("announcements", []) or []:
