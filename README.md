@@ -31,7 +31,72 @@ A 股全栈数据 · 七层架构 · V3.1
 
 ---
 
-## 快速开始
+## API 服务模式（V4.0 新增）
+
+除了 Skill 模式外，现在还可以作为独立 API 服务运行。
+
+### 安装
+
+```bash
+pip install fastapi uvicorn requests pandas lxml pydantic-settings
+pip install -U pytest responses httpx ruff  # 开发依赖
+```
+
+### 启动服务
+
+```bash
+uvicorn app.main:app --reload
+```
+
+### 运行测试
+
+```bash
+pytest tests/
+```
+
+### MVP 接口清单
+
+| 端点 | 方法 | 数据源 |
+|------|------|--------|
+| `/api/v1/health` | GET | self |
+| `/api/v1/quote?codes=600519,000858` | GET | 腾讯财经 |
+| `/api/v1/stock-info/{code}` | GET | 东财 push2 |
+| `/api/v1/valuation/{code}` | GET | 腾讯 + 同花顺 |
+| `/api/v1/reports/{code}` | GET | 东财 reportapi |
+| `/api/v1/fund-flow/minute/{code}` | GET | 东财 push2 |
+| `/api/v1/margin/{code}` | GET | 东财 datacenter |
+| `/api/v1/news/{code}` | GET | 东财 search-api |
+| `/api/v1/announcements/{code}` | GET | 巨潮 cninfo |
+
+### 响应格式
+
+所有接口返回统一 envelope：
+
+```json
+{
+  "success": true,
+  "request_id": "uuid",
+  "data": {},
+  "source": ["tencent"],
+  "cached": false,
+  "warnings": [],
+  "fetched_at": "2026-05-28T10:30:00+00:00"
+}
+```
+
+### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `APP_ENV` | development | 运行环境 |
+| `APP_HOST` | 0.0.0.0 | 监听地址 |
+| `APP_PORT` | 8000 | 监听端口 |
+| `DEFAULT_HTTP_TIMEOUT` | 15 | HTTP 请求超时秒数 |
+| `IWENCAI_API_KEY` | (空) | iwencai 语义搜索 Key |
+
+---
+
+## Skill 模式快速开始
 
 **3 步，2 分钟。**
 
