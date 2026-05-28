@@ -5,8 +5,10 @@ from app.services.signal_service import (
     get_billboard,
     get_concept_blocks,
     get_daily_billboard,
+    get_hot_stocks,
     get_lockup_expiry,
     get_industry_ranking,
+    get_northbound_realtime,
 )
 
 router = APIRouter()
@@ -40,3 +42,15 @@ def industry_ranking(top_n: int = Query(20, description="Number of top/bottom se
 def concept_blocks(code: str):
     data = get_concept_blocks(code)
     return success_response(data=data, source=["baidu"])
+
+
+@router.get("/hot-stocks")
+def hot_stocks(date: str = Query(None, description="YYYY-MM-DD, defaults to today")):
+    data = get_hot_stocks(date=date)
+    return success_response(data=data, source=["ths"])
+
+
+@router.get("/northbound")
+def northbound():
+    data = get_northbound_realtime()
+    return success_response(data=data, source=["ths"])

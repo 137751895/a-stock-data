@@ -1,4 +1,4 @@
-"""Signal layer services: dragon tiger board, lockup expiry, industry ranking, concept blocks."""
+"""Signal layer services: dragon tiger board, lockup expiry, industry ranking, concept blocks, hot stocks, northbound."""
 from datetime import datetime, timedelta
 
 from app.core.normalize import validate_code
@@ -10,6 +10,7 @@ from app.providers.eastmoney import (
     fetch_lockup_expiry,
     fetch_industry_ranking,
 )
+from app.providers.ths import fetch_hot_stocks, fetch_northbound_realtime
 
 
 def get_billboard(code: str, trade_date: str | None = None, look_back: int = 30) -> dict:
@@ -132,3 +133,50 @@ def get_concept_blocks(code: str) -> dict:
     """
     code = validate_code(code)
     return fetch_concept_blocks(code)
+
+
+def get_hot_stocks(date: str | None = None) -> dict:
+    """Get THS hot/strong stocks with reason tags.
+
+    Returns: {date: str, total: int, stocks: [...]}
+    """
+    if date is None:
+        date = datetime.now().strftime("%Y-%m-%d")
+
+    raw = fetch_hot_stocks(date)
+    stocks = []
+    for row in raw:
+        stocks.append({
+            "code": row.get("code", ""),
+            "name": row.get("name", ""),
+            "reason": row.get("reason", ""),
+            "close": float(row.get("close", 0) or 0),
+            "change_pct": float(row.get("zhangfu", 0) or 0),
+            "turnover_pct": float(row.get("huanshou", 0) or 0),
+            "amount": float(row.get("chengjiaoe", 0) or 0),
+            "net_big_order": float(row.get("ddejingliang", 0) or 0),
+            "market": row.get("market", ""),
+        })
+
+    return {"date": date, "total": len(stocks), "stocks": stocks}
+
+
+def get_northbound_realtime() -> dict:
+    """Get northbound capital realtime minute-level flow.
+
+    Returns: {points: int, data: [{time, hgt_yi, sgt_yi}, ...]}
+    """
+    raw = fetch_northbound_realtime()
+    times = raw.get("time", [])
+    hgt = raw.get("hgt", [])
+    sgt = raw.get("sgt", [])
+
+    data = []
+    for i, t in enumerate(times):
+        data.append({
+            "time": t,
+            "hgt_yi": hgt[i] if i < len(hgt) else None,
+            "sgt_yi": sgt[i] if i < len(sgt) else None,
+        })
+
+    return {"points": len(data), "data": data}
