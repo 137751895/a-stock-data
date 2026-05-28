@@ -34,3 +34,45 @@ def get_financial_report(code: str, report_type: str = "lrb") -> list[dict]:
         from app.core.errors import ValidationError
         raise ValidationError(f"Invalid report_type: '{report_type}'. Must be 'fzb', 'lrb', or 'llb'")
     return fetch_financial_report(code, report_type)
+
+
+def get_finance_snapshot(code: str) -> list[dict]:
+    """Get 37-field quarterly finance snapshot via mootdx.
+
+    Requires mootdx TCP connection. Returns 503 if unavailable.
+    """
+    from app.providers.mootdx_provider import fetch_finance_snapshot
+    code = validate_code(code)
+    return fetch_finance_snapshot(code)
+
+
+def get_f10(code: str, category: str = "公司概况") -> dict:
+    """Get F10 text data for a given category via mootdx.
+
+    Requires mootdx TCP connection. Returns 503 if unavailable.
+    """
+    from app.providers.mootdx_provider import fetch_f10
+
+    valid_categories = [
+        "最新提示", "公司概况", "财务分析", "股东研究", "股本结构",
+        "资本运作", "业内点评", "行业分析", "公司大事",
+    ]
+    code = validate_code(code)
+    if category not in valid_categories:
+        from app.core.errors import ValidationError
+        raise ValidationError(
+            f"Invalid category: '{category}'. Must be one of: {', '.join(valid_categories)}"
+        )
+    text = fetch_f10(code, category)
+    return {"category": category, "content": text}
+
+
+def get_f10_announcement(code: str) -> dict:
+    """Get latest announcement summary from mootdx F10.
+
+    Requires mootdx TCP connection. Returns 503 if unavailable.
+    """
+    from app.providers.mootdx_provider import fetch_f10_announcement
+    code = validate_code(code)
+    text = fetch_f10_announcement(code)
+    return {"category": "最新提示", "content": text}

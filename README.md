@@ -80,6 +80,9 @@ pytest tests/
 | `/api/v1/announcements/{code}` | GET | 巨潮 cninfo | ✅ |
 | `/api/v1/financial-report/{code}` | GET | 新浪财经 | ✅ 新增 |
 | `/api/v1/concept-blocks/{code}` | GET | 百度股市通 | ✅ 新增 |
+| `/api/v1/finance-snapshot/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
+| `/api/v1/f10/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
+| `/api/v1/f10-announcement/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
 
 ### 响应格式
 
@@ -115,7 +118,7 @@ pytest tests/
 
 | Layer | SKILL.md 功能 | API 状态 | 说明 |
 |-------|--------------|----------|------|
-| **1 行情** | mootdx K线/盘口/逐笔 | ❌ 未实现 | 需 mootdx TCP 连接 |
+| **1 行情** | mootdx K线/盘口/逐笔 | ⚠️ 已接线待TCP | `/api/v1/finance-snapshot/{code}` 需 mootdx TCP |
 | **1 行情** | 腾讯 PE/PB/市值/实时行情 | ✅ 已实现 | `/api/v1/quote` |
 | **1 行情** | 腾讯 指数/ETF 行情 | ⚠️ 半实现 | quote 接口可传指数代码 |
 | **1 行情** | 百度K线(带MA) | ✅ 已实现 | `/api/v1/kline/{code}` |
@@ -138,20 +141,21 @@ pytest tests/
 | **5 新闻** | 东财个股新闻 | ✅ 已实现 | `/api/v1/news/{code}` |
 | **5 新闻** | 财联社快讯 | ✅ 已实现 | `/api/v1/telegraph` |
 | **5 新闻** | 东财全球资讯 | ✅ 已实现 | `/api/v1/global-news` |
-| **6 基础** | mootdx 财务快照 | ❌ 未实现 | 需 mootdx TCP |
-| **6 基础** | mootdx F10 | ❌ 未实现 | 需 mootdx TCP |
+| **6 基础** | mootdx 财务快照 | ⚠️ 已接线待TCP | `/api/v1/finance-snapshot/{code}` 需 mootdx TCP |
+| **6 基础** | mootdx F10 | ⚠️ 已接线待TCP | `/api/v1/f10/{code}` 需 mootdx TCP |
 | **6 基础** | 东财个股基本面 | ✅ 已实现 | `/api/v1/stock-info/{code}` +10分钟缓存 |
 | **6 基础** | 新浪财报三表 | ✅ 已实现 | `/api/v1/financial-report/{code}` |
 | **7 公告** | 巨潮公告 | ✅ 已实现 | `/api/v1/announcements/{code}` |
-| **7 公告** | mootdx F10 公告 | ❌ 未实现 | 需 mootdx TCP |
+| **7 公告** | mootdx F10 公告 | ⚠️ 已接线待TCP | `/api/v1/f10-announcement/{code}` 需 mootdx TCP |
 | **估值** | forward PE / PEG / PE消化 | ✅ 已实现 | `/api/v1/valuation/{code}` |
 
-**统计:** 已实现 22/28，半实现 1/28，未实现 5/28。
+**统计:** 已实现 22/28，半实现 4/28（含3项mootdx已接线待TCP验证+1项指数/ETF），未实现 2/28。
 
 **未实现项均属以下类别：**
-- 需 mootdx TCP 依赖 (3项): K线/盘口/逐笔、财务快照、F10/公告
 - 需 API Key (1项): iwencai NL语义搜索
 - 需 THS 反爬分析 (2项): 热点强势股、北向资金
+
+**已接线待TCP验证 (3项):** mootdx K线/盘口/逐笔、财务快照、F10/公告 — 代码已实现，mock测试已通过，真实TCP连接需部署环境验证
 
 **本轮工程完善清单:**
 1. ✅ HTTP retry 机制接入 — `HTTPAdapter` + `urllib3.Retry`，自动重试 500/502/503/504
