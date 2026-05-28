@@ -56,3 +56,34 @@ def test_valuation_with_no_eps_returns_warnings(mock_eps, mock_parse, mock_ths, 
     data = response.json()
     assert data["data"]["pe_fwd"] is None
     assert any("EPS" in w for w in data["warnings"])
+
+
+@patch("app.services.valuation_service.fetch_quotes", return_value=MOCK_QUOTES)
+@patch("app.services.valuation_service.fetch_eps_forecast", return_value=MOCK_THS)
+@patch("app.services.valuation_service.parse_ths_eps_table")
+@patch("app.services.valuation_service.extract_eps_from_df", return_value={
+    "eps_cur": 60.0, "eps_next": 60.0, "analyst_count": 25,
+})
+def test_valuation_zero_cagr_returns_null_peg(mock_eps, mock_parse, mock_ths, mock_quotes):
+    """When eps_next == eps_cur, cagr=0, PEG and digest_years should be None."""
+    response = client.get("/api/v1/valuation/600519")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["data"]["cagr_pct"] is None  # cagr=0 → falsy → None
+    assert data["data"]["peg"] is None
+    assert data["data"]["digest_years"] is None
+
+
+@patch("app.services.valuation_service.fetch_quotes", return_value=MOCK_QUOTES)
+@patch("app.services.valuation_service.fetch_eps_forecast", return_value=MOCK_THS)
+@patch("app.services.valuation_service.parse_ths_eps_table")
+@patch("app.services.valuation_service.extract_eps_from_df", return_value={
+    "eps_cur": 60.0, "eps_next": 30.0, "analyst_count": 25,
+})
+def test_valuation_negative_cagr_returns_null_peg(mock_eps, mock_parse, mock_ths, mock_quotes):
+    """When eps declines, cagr < 0, PEG should be None."""
+    response = client.get("/api/v1/valuation/600519")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["data"]["peg"] is None
+    assert data["data"]["digest_years"] is None
