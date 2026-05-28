@@ -83,6 +83,7 @@ pytest tests/
 | `/api/v1/finance-snapshot/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
 | `/api/v1/f10/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
 | `/api/v1/f10-announcement/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
+| `/api/v1/iwencai-search` | GET | iwencai | ⚠️ 待Key |
 
 ### 响应格式
 
@@ -124,7 +125,7 @@ pytest tests/
 | **1 行情** | 百度K线(带MA) | ✅ 已实现 | `/api/v1/kline/{code}` |
 | **2 研报** | 东财研报列表+PDF | ✅ 已实现 | `/api/v1/reports/{code}` +30分钟缓存 |
 | **2 研报** | 同花顺一致预期EPS | ✅ 已实现 | 内嵌于 `/api/v1/valuation/{code}` |
-| **2 研报** | iwencai NL语义搜索 | ❌ 未实现 | 需 IWENCAI_API_KEY |
+| **2 研报** | iwencai NL语义搜索 | ⚠️ 已接线待Key | `/api/v1/iwencai-search` 需 IWENCAI_API_KEY |
 | **3 信号** | 同花顺热点强势股 | ❌ 未实现 | THS API 需反爬分析 |
 | **3 信号** | 同花顺北向资金 | ❌ 未实现 | THS API 需反爬分析 |
 | **3 信号** | 百度概念板块 | ✅ 已实现 | `/api/v1/concept-blocks/{code}` |
@@ -149,13 +150,14 @@ pytest tests/
 | **7 公告** | mootdx F10 公告 | ⚠️ 已接线待TCP | `/api/v1/f10-announcement/{code}` 需 mootdx TCP |
 | **估值** | forward PE / PEG / PE消化 | ✅ 已实现 | `/api/v1/valuation/{code}` |
 
-**统计:** 已实现 22/28，半实现 4/28（含3项mootdx已接线待TCP验证+1项指数/ETF），未实现 2/28。
+**统计:** 已实现 22/28，半实现 5/28（含3项mootdx已接线待TCP验证+1项iwencai已接线待Key+1项指数/ETF），未实现 1/28。
 
-**未实现项均属以下类别：**
-- 需 API Key (1项): iwencai NL语义搜索
+**未实现项：**
 - 需 THS 反爬分析 (2项): 热点强势股、北向资金
 
 **已接线待TCP验证 (3项):** mootdx K线/盘口/逐笔、财务快照、F10/公告 — 代码已实现，mock测试已通过，真实TCP连接需部署环境验证
+
+**已接线待Key验证 (1项):** iwencai NL语义搜索 — 代码已实现，mock测试已通过，需设置 IWENCAI_API_KEY
 
 **本轮工程完善清单:**
 1. ✅ HTTP retry 机制接入 — `HTTPAdapter` + `urllib3.Retry`，自动重试 500/502/503/504
