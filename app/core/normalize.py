@@ -36,7 +36,7 @@ def get_prefix(code: str) -> str:
     """6-digit code -> market prefix (sh/sz/bj)."""
     if code.startswith(("6", "9")):
         return "sh"
-    elif code.startswith("8"):
+    elif code.startswith(("8", "4")):
         return "bj"
     else:
         return "sz"
@@ -49,9 +49,14 @@ def to_tencent_symbol(code: str) -> str:
 
 
 def to_eastmoney_secid(code: str) -> str:
-    """6-digit code -> eastmoney secid like 1.600519."""
+    """6-digit code -> eastmoney secid like 1.600519.
+
+    Shanghai (6xx/9xx) -> 1.{code}
+    Shenzhen (0xx/2xx/3xx) -> 0.{code}
+    Beijing (8xx/4xx) -> 0.{code}
+    """
     code = normalize_code(code)
-    market_code = 1 if code.startswith("6") else 0
+    market_code = 1 if code.startswith(("6", "9")) else 0
     return f"{market_code}.{code}"
 
 
