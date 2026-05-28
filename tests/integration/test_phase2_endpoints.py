@@ -198,3 +198,51 @@ class TestGlobalNewsAPI:
         assert data["success"] is True
         assert len(data["data"]) == 1
         assert data["source"] == ["eastmoney"]
+
+
+# === Market layer tests (Baidu K-line) ===
+
+class TestKlineAPI:
+    @responses.activate
+    def test_kline_returns_200(self):
+        responses.add(
+            responses.GET,
+            "https://finance.pae.baidu.com/selfselect/getstockquotation",
+            json={"Result": {"newMarketData": {
+                "keys": ["time", "open", "close", "high", "low"],
+                "marketData": "2026-05-28,100,105,110,95;2026-05-27,98,100,102,96"
+            }}},
+            status=200,
+        )
+        response = client.get("/api/v1/kline/600519")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["source"] == ["baidu"]
+        assert len(data["data"]["rows"]) == 2
+        assert data["data"]["keys"] == ["time", "open", "close", "high", "low"]
+
+
+# === Fundamentals layer tests (Sina financial report) ===
+
+class TestFinancialReportAPI:
+    @responses.activate
+    def test_financial_report_returns_200(self):
+        responses.add(
+            responses.GET,
+            "https://quotes.sina.cn/cn/api/openapi.php/CompanyFinanceService.getFinanceReport2022",
+            json={"result": {"data": {"lrb": [
+                {"报告日": "2025-12-31", "净利润": "86000000000"}
+            ]}}},
+            status=200,
+        )
+        response = client.get("/api/v1/financial-report/600519?report_type=lrb")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["source"] == ["sina"]
+        assert len(data["data"]) == 1
+
+    def test_invalid_report_type_returns_400(self):
+        response = client.get("/api/v1/financial-report/600519?report_type=xyz")
+        assert response.status_code == 400
