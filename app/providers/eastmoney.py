@@ -115,14 +115,17 @@ def fetch_fund_flow_minute(code: str) -> list[dict]:
     for line in (d.get("data") or {}).get("klines", []):
         parts = line.split(",")
         if len(parts) >= 6:
-            rows.append({
-                "time": parts[0],
-                "main_net": float(parts[1]),
-                "small_net": float(parts[2]),
-                "mid_net": float(parts[3]),
-                "large_net": float(parts[4]),
-                "super_net": float(parts[5]),
-            })
+            try:
+                rows.append({
+                    "time": parts[0],
+                    "main_net": float(parts[1]),
+                    "small_net": float(parts[2]),
+                    "mid_net": float(parts[3]),
+                    "large_net": float(parts[4]),
+                    "super_net": float(parts[5]),
+                })
+            except (ValueError, TypeError):
+                continue  # skip malformed lines, don't crash entire response
     return rows
 
 

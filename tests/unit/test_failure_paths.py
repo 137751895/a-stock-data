@@ -1,5 +1,5 @@
 """Tests for failure paths: invalid code, provider timeout, malformed JSONP,
-upstream non-200, empty response, and structure changes."""
+upstream non-200, empty response, structure changes, and POST failures."""
 import pytest
 import responses
 from requests.exceptions import Timeout, ConnectionError as ReqConnectionError
@@ -13,6 +13,7 @@ from app.providers.eastmoney import (
     fetch_fund_flow_minute,
     eastmoney_datacenter,
 )
+from app.providers.cninfo import fetch_announcements
 
 
 class TestInvalidCodeValidation:
@@ -202,3 +203,87 @@ class TestStructureChange:
         assert result["code"] == "600519"
         assert result["name"] == ""  # default
         assert result["price"] == 0  # default
+
+
+class TestFundFlowMalformedCSV:
+    @responses.activate
+    def test_malformed_kline_values_skipped(self):
+        """Non-numeric values in kline CSV should be skipped, not crash."""
+        responses.add(
+            responses.GET,
+            "https://push2.eastmoney.com/api/qt/stock/fflow/kline/get",
+            json={"data": {"klines": [
+                "09:30,100,-50,30,70,80",       # valid
+                "09:31,BAD,-60,40,80,90",        # invalid float
+                "09:32,200,-60,40,80,90",        # valid
+            ]}},
+            status=200,
+        )
+        result = fetch_fund_flow_minute("600519")
+        assert len(result) == 2  # malformed line skipped
+        assert result[0]["time"] == "09:30"
+        assert result[1]["time"] == "09:32"
+
+    @responses.activate
+    def test_short_kline_values_skipped(self):
+        """Lines with fewer than 6 CSV fields should be skipped."""
+        responses.add(
+            responses.GET,
+            "https://push2.eastmoney.com/api/qt/stock/fflow/kline/get",
+            json={"data": {"klines": [
+                "09:30,100",        # too short
+                "09:31,200,-60,40,80,90",  # valid
+            ]}},
+            status=200,
+        )
+        result = fetch_fund_flow_minute("600519")
+        assert len(result) == 1
+
+
+class TestHttpPostFailurePaths:
+    @responses.activate
+    def test_cninfo_timeout_raises_upstream_error(self):
+        responses.add(
+            responses.POST,
+            "https://www.cninfo.com.cn/new/hisAnnouncement/query",
+            body=Timeout("timed out"),
+        )
+        with pytest.raises(UpstreamHTTPError) as exc_info:
+            fetch_announcements("600519")
+        assert exc_info.value.provider == "cninfo"
+        assert exc_info.value.status_code == 502
+
+    @responses.activate
+    def test_cninfo_connection_error_raises_upstream_error(self):
+        responses.add(
+            responses.POST,
+            "https://www.cninfo.com.cn/new/hisAnnouncement/query",
+            body=ReqConnectionError("connection refused"),
+        )
+        with pytest.raises(UpstreamHTTPError) as exc_info:
+            fetch_announcements("600519")
+        assert exc_info.value.provider == "cninfo"
+
+    @responses.activate
+    def test_cninfo_non_200_raises_upstream_error(self):
+        responses.add(
+            responses.POST,
+            "https://www.cninfo.com.cn/new/hisAnnouncement/query",
+            json={"error": "server error"},
+            status=500,
+        )
+        with pytest.raises(UpstreamHTTPError) as exc_info:
+            fetch_announcements("600519")
+        assert "500" in exc_info.value.message
+
+    @responses.activate
+    def test_cninfo_invalid_json_raises_schema_error(self):
+        responses.add(
+            responses.POST,
+            "https://www.cninfo.com.cn/new/hisAnnouncement/query",
+            body="not json at all",
+            status=200,
+        )
+        with pytest.raises(UpstreamSchemaError) as exc_info:
+            fetch_announcements("600519")
+        assert exc_info.value.provider == "cninfo"
