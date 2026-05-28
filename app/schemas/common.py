@@ -22,11 +22,13 @@ class ApiResponse(BaseModel):
     error: ErrorDetail | None = None
 
 
-def success_response(data: Any, source: list[str] | None = None, warnings: list[str] | None = None) -> dict:
+def success_response(data: Any, source: list[str] | None = None, warnings: list[str] | None = None,
+                     cached: bool = False) -> dict:
     return ApiResponse(
         success=True,
         data=data,
         source=source or [],
+        cached=cached,
         warnings=warnings or [],
     ).model_dump()
 

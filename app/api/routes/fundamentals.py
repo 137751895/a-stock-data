@@ -8,5 +8,5 @@ router = APIRouter()
 
 @router.get("/stock-info/{code}")
 def stock_info(code: str):
-    data = get_stock_info(code)
-    return success_response(data=data, source=["eastmoney"])
+    data, cached = get_stock_info(code)
+    return success_response(data=data, source=["eastmoney"], cached=cached)
