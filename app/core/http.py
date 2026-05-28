@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from app.core.config import settings
 from app.core.errors import UpstreamHTTPError
@@ -9,6 +11,16 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 def create_session() -> requests.Session:
     session = requests.Session()
     session.headers.update({"User-Agent": UA})
+    retry = Retry(
+        total=settings.default_retry_count,
+        backoff_factor=0.3,
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods=["GET", "POST"],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
     return session
 
 
