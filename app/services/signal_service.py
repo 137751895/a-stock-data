@@ -1,7 +1,8 @@
-"""Signal layer services: dragon tiger board, lockup expiry, industry ranking."""
+"""Signal layer services: dragon tiger board, lockup expiry, industry ranking, concept blocks."""
 from datetime import datetime, timedelta
 
 from app.core.normalize import validate_code
+from app.providers.baidu import fetch_concept_blocks
 from app.providers.eastmoney import (
     fetch_billboard_records,
     fetch_billboard_seats,
@@ -122,3 +123,12 @@ def get_industry_ranking(top_n: int = 20) -> dict:
         "bottom": rows[-top_n:],
         "total": len(rows),
     }
+
+
+def get_concept_blocks(code: str) -> dict:
+    """Get concept block classification for a stock from Baidu.
+
+    Returns: {industry: [...], concept: [...], region: [...], concept_tags: [...]}
+    """
+    code = validate_code(code)
+    return fetch_concept_blocks(code)

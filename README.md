@@ -79,6 +79,7 @@ pytest tests/
 | `/api/v1/global-news` | GET | 东财 np-weblist | ✅ 新增 |
 | `/api/v1/announcements/{code}` | GET | 巨潮 cninfo | ✅ |
 | `/api/v1/financial-report/{code}` | GET | 新浪财经 | ✅ 新增 |
+| `/api/v1/concept-blocks/{code}` | GET | 百度股市通 | ✅ 新增 |
 
 ### 响应格式
 
@@ -123,7 +124,7 @@ pytest tests/
 | **2 研报** | iwencai NL语义搜索 | ❌ 未实现 | 需 IWENCAI_API_KEY |
 | **3 信号** | 同花顺热点强势股 | ❌ 未实现 | THS API 需反爬分析 |
 | **3 信号** | 同花顺北向资金 | ❌ 未实现 | THS API 需反爬分析 |
-| **3 信号** | 百度概念板块 | ❌ 未实现 | |
+| **3 信号** | 百度概念板块 | ✅ 已实现 | `/api/v1/concept-blocks/{code}` |
 | **3 信号** | 东财资金流(分钟) | ✅ 已实现 | `/api/v1/fund-flow/minute/{code}` |
 | **3 信号** | 龙虎榜席位 | ✅ 已实现 | `/api/v1/billboard/{code}` |
 | **3 信号** | 限售解禁日历 | ✅ 已实现 | `/api/v1/lockup/{code}` |
@@ -145,7 +146,7 @@ pytest tests/
 | **7 公告** | mootdx F10 公告 | ❌ 未实现 | 需 mootdx TCP |
 | **估值** | forward PE / PEG / PE消化 | ✅ 已实现 | `/api/v1/valuation/{code}` |
 
-**统计:** 已实现 21/28，半实现 1/28，未实现 6/28。
+**统计:** 已实现 22/28，半实现 1/28，未实现 5/28。
 
 **未实现项均属以下类别：**
 - 需 mootdx TCP 依赖 (3项): K线/盘口/逐笔、财务快照、F10/公告
@@ -161,6 +162,8 @@ pytest tests/
 6. ✅ valuation cagr=0 / 负cagr 边界测试
 7. ✅ 新增 12 个端点（信号层 4 + 资金面 4 + 新闻层 2 + 行情层 1 + 基础层 1）
 8. ✅ 178 测试全部通过 (131→178)
+9. ✅ 百度概念板块 `/api/v1/concept-blocks/{code}` — 行业/概念/地域三维归属
+10. ✅ 187 测试全部通过 (178→187)
 
 ---
 
