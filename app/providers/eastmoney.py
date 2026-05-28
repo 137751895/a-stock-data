@@ -112,7 +112,7 @@ def fetch_fund_flow_minute(code: str) -> list[dict]:
         raise UpstreamSchemaError(f"Failed to parse fund flow response: {e}", provider="eastmoney")
 
     rows = []
-    for line in d.get("data", {}).get("klines", []):
+    for line in (d.get("data") or {}).get("klines", []):
         parts = line.split(",")
         if len(parts) >= 6:
             rows.append({
