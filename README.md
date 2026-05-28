@@ -94,6 +94,59 @@ pytest tests/
 | `DEFAULT_HTTP_TIMEOUT` | 15 | HTTP 请求超时秒数 |
 | `IWENCAI_API_KEY` | (空) | iwencai 语义搜索 Key |
 
+### 设计与实现对比审计表
+
+对照 SKILL.md 28 个端点，当前 MVP API 服务的实现状态：
+
+| Layer | SKILL.md 功能 | API 状态 | 说明 |
+|-------|--------------|----------|------|
+| **1 行情** | mootdx K线/盘口/逐笔 | ❌ 未实现 | 需 mootdx TCP 连接，MVP 不含 |
+| **1 行情** | 腾讯 PE/PB/市值/实时行情 | ✅ 已实现 | `/api/v1/quote` |
+| **1 行情** | 腾讯 指数/ETF 行情 | ⚠️ 半实现 | quote 接口可传指数代码，未独立端点 |
+| **1 行情** | 百度K线(带MA) | ❌ 未实现 | |
+| **2 研报** | 东财研报列表+PDF | ✅ 已实现 | `/api/v1/reports/{code}` |
+| **2 研报** | 同花顺一致预期EPS | ✅ 已实现 | 内嵌于 `/api/v1/valuation/{code}` |
+| **2 研报** | iwencai NL语义搜索 | ❌ 未实现 | 需 API Key |
+| **3 信号** | 同花顺热点强势股 | ❌ 未实现 | |
+| **3 信号** | 同花顺北向资金 | ❌ 未实现 | |
+| **3 信号** | 百度概念板块 | ❌ 未实现 | |
+| **3 信号** | 东财资金流(分钟) | ✅ 已实现 | `/api/v1/fund-flow/minute/{code}` |
+| **3 信号** | 龙虎榜席位 | ❌ 未实现 | |
+| **3 信号** | 限售解禁日历 | ❌ 未实现 | |
+| **3 信号** | 行业板块排名 | ❌ 未实现 | |
+| **3 信号** | 全市场龙虎榜 | ❌ 未实现 | |
+| **4 资金面** | 融资融券明细 | ✅ 已实现 | `/api/v1/margin/{code}` 已标准化字段 |
+| **4 资金面** | 大宗交易 | ❌ 未实现 | |
+| **4 资金面** | 股东户数变化 | ❌ 未实现 | |
+| **4 资金面** | 分红送转历史 | ❌ 未实现 | |
+| **4 资金面** | 资金流120日 | ❌ 未实现 | |
+| **5 新闻** | 东财个股新闻 | ✅ 已实现 | `/api/v1/news/{code}` |
+| **5 新闻** | 财联社快讯 | ❌ 未实现 | |
+| **5 新闻** | 东财全球资讯 | ❌ 未实现 | |
+| **6 基础** | mootdx 财务快照 | ❌ 未实现 | 需 mootdx TCP |
+| **6 基础** | mootdx F10 | ❌ 未实现 | 需 mootdx TCP |
+| **6 基础** | 东财个股基本面 | ✅ 已实现 | `/api/v1/stock-info/{code}` |
+| **6 基础** | 新浪财报三表 | ❌ 未实现 | |
+| **7 公告** | 巨潮公告 | ✅ 已实现 | `/api/v1/announcements/{code}` |
+| **7 公告** | mootdx F10 公告 | ❌ 未实现 | 需 mootdx TCP |
+| **估值** | forward PE / PEG / PE消化 | ✅ 已实现 | `/api/v1/valuation/{code}` |
+
+**统计:** 已实现 8/28 (MVP)，半实现 1/28，未实现 19/28。
+
+**MVP 已修复问题清单 (本次变更):**
+1. ✅ 所有路由 `async def` → `def`，消除阻塞式 async 架构 bug
+2. ✅ Tencent provider 从 urllib 迁移到统一 `core/http.py`
+3. ✅ 统一 HTTP 客户端策略（超时、Header、错误包装、会话管理）
+4. ✅ Provider 层网络/状态码/解析错误 → AppError 子类
+5. ✅ 统一错误 envelope 贯通 Provider → Service → Route
+6. ✅ 输入校验 `validate_code()` + ValidationError(400)
+7. ✅ margin 接口返回 SKILL.md 语义字段（非原始 datacenter 行）
+8. ✅ `to_eastmoney_secid` / `get_prefix` 支持北京证券 8xx/4xx
+9. ✅ JSONP 解析异常保护
+10. ✅ fund_flow `data: None` 空指针修复
+11. ✅ 补齐所有端点 Pydantic schema（capital/news/research/filings/valuation）
+12. ✅ 131 测试覆盖（77→131），含失败路径、错误 envelope、margin 语义、BJ 代码
+
 ---
 
 ## Skill 模式快速开始
