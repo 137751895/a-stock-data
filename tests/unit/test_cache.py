@@ -8,13 +8,10 @@ Tests cover:
 5. Corrupted cache file is handled gracefully
 6. Cache integrates correctly with services (stock_info, reports)
 """
-import json
-import time
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 
 from app.core.cache import cache_get, cache_set, _cache_key
 

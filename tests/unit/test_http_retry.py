@@ -11,7 +11,7 @@ import responses
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from app.core.http import create_session, http_get, http_post, _session
+from app.core.http import create_session, http_get, http_post
 from app.core.errors import UpstreamHTTPError
 import app.core.http as http_module
 import pytest

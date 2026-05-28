@@ -2,6 +2,8 @@ from app.core.http import http_get
 from app.core.normalize import to_eastmoney_secid
 from app.core.errors import UpstreamSchemaError
 
+import uuid
+
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 DATACENTER_URL = "https://datacenter-web.eastmoney.com/api/data/v1/get"
 
@@ -188,5 +190,162 @@ def fetch_stock_news(code: str, page_size: int = 20) -> list[dict]:
             "time": a.get("date", ""),
             "source": a.get("mediaName", ""),
             "url": a.get("url", ""),
+        })
+    return rows
+
+
+def fetch_billboard_records(code: str, start_date: str, end_date: str) -> list[dict]:
+    """Fetch dragon tiger board records for a stock from Eastmoney datacenter."""
+    return eastmoney_datacenter(
+        "RPT_DAILYBILLBOARD_DETAILSNEW",
+        filter_str=f"(TRADE_DATE>='{start_date}')(TRADE_DATE<='{end_date}')(SECURITY_CODE=\"{code}\")",
+        page_size=50,
+        sort_columns="TRADE_DATE", sort_types="-1",
+    )
+
+
+def fetch_billboard_seats(code: str, trade_date: str, side: str = "buy") -> list[dict]:
+    """Fetch buy/sell seat details for a dragon tiger board entry.
+
+    side: 'buy' or 'sell'
+    """
+    report_name = "RPT_BILLBOARD_DAILYDETAILSBUY" if side == "buy" else "RPT_BILLBOARD_DAILYDETAILSSELL"
+    sort_col = "BUY" if side == "buy" else "SELL"
+    return eastmoney_datacenter(
+        report_name,
+        filter_str=f"(TRADE_DATE='{trade_date}')(SECURITY_CODE=\"{code}\")",
+        page_size=10,
+        sort_columns=sort_col, sort_types="-1",
+    )
+
+
+def fetch_daily_billboard(trade_date: str) -> list[dict]:
+    """Fetch full market dragon tiger board for a given date."""
+    return eastmoney_datacenter(
+        "RPT_DAILYBILLBOARD_DETAILSNEW",
+        filter_str=f"(TRADE_DATE>='{trade_date}')(TRADE_DATE<='{trade_date}')",
+        page_size=500,
+        sort_columns="BILLBOARD_NET_AMT", sort_types="-1",
+    )
+
+
+def fetch_lockup_expiry(code: str) -> list[dict]:
+    """Fetch lockup expiry (限售解禁) records from Eastmoney datacenter."""
+    return eastmoney_datacenter(
+        "RPT_LIFT_STAGE",
+        filter_str=f'(SECURITY_CODE="{code}")',
+        page_size=20,
+        sort_columns="FREE_DATE", sort_types="-1",
+    )
+
+
+def fetch_industry_ranking() -> list[dict]:
+    """Fetch industry sector ranking from Eastmoney push2."""
+    url = "https://push2.eastmoney.com/api/qt/clist/get"
+    params = {
+        "pn": "1", "pz": "100", "po": "1", "np": "1",
+        "fltt": "2", "invt": "2",
+        "fs": "m:90+t:2",
+        "fields": "f2,f3,f4,f12,f13,f14,f104,f105,f128,f136,f140,f141,f207",
+    }
+    r = http_get(url, params=params, provider="eastmoney")
+    try:
+        d = r.json()
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to parse industry ranking response: {e}", provider="eastmoney")
+    items = (d.get("data") or {}).get("diff", [])
+    return items if items else []
+
+
+def fetch_block_trade(code: str, page_size: int = 20) -> list[dict]:
+    """Fetch block trade records from Eastmoney datacenter."""
+    return eastmoney_datacenter(
+        "RPT_DATA_BLOCKTRADE",
+        filter_str=f'(SECURITY_CODE="{code}")',
+        page_size=page_size,
+        sort_columns="TRADE_DATE", sort_types="-1",
+    )
+
+
+def fetch_holder_num(code: str, page_size: int = 10) -> list[dict]:
+    """Fetch shareholder count changes from Eastmoney datacenter."""
+    return eastmoney_datacenter(
+        "RPT_HOLDERNUMLATEST",
+        filter_str=f'(SECURITY_CODE="{code}")',
+        page_size=page_size,
+        sort_columns="END_DATE", sort_types="-1",
+    )
+
+
+def fetch_dividend_history(code: str, page_size: int = 20) -> list[dict]:
+    """Fetch dividend/bonus history from Eastmoney datacenter."""
+    return eastmoney_datacenter(
+        "RPT_SHAREBONUS_DET",
+        filter_str=f'(SECURITY_CODE="{code}")',
+        page_size=page_size,
+        sort_columns="EX_DIVIDEND_DATE", sort_types="-1",
+    )
+
+
+def fetch_fund_flow_daily(code: str) -> list[dict]:
+    """Fetch 120-day daily fund flow from Eastmoney push2his."""
+    secid = to_eastmoney_secid(code)
+    url = "https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get"
+    params = {
+        "secid": secid,
+        "fields1": "f1,f2,f3,f7",
+        "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61,f62,f63,f64,f65",
+        "lmt": "120",
+    }
+    headers = {
+        "Referer": "https://quote.eastmoney.com/",
+        "Origin": "https://quote.eastmoney.com",
+    }
+    r = http_get(url, params=params, headers=headers, provider="eastmoney")
+    try:
+        d = r.json()
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to parse fund flow daily response: {e}", provider="eastmoney")
+
+    rows = []
+    for line in (d.get("data") or {}).get("klines", []):
+        parts = line.split(",")
+        if len(parts) >= 6:
+            try:
+                rows.append({
+                    "date": parts[0],
+                    "main_net": float(parts[1]) if parts[1] != "-" else 0,
+                    "small_net": float(parts[2]) if parts[2] != "-" else 0,
+                    "mid_net": float(parts[3]) if parts[3] != "-" else 0,
+                    "large_net": float(parts[4]) if parts[4] != "-" else 0,
+                    "super_net": float(parts[5]) if parts[5] != "-" else 0,
+                })
+            except (ValueError, TypeError):
+                continue
+    return rows
+
+
+def fetch_global_news(page_size: int = 50) -> list[dict]:
+    """Fetch 7x24 global financial news from Eastmoney np-weblist."""
+    url = "https://np-weblist.eastmoney.com/comm/web/getFastNewsList"
+    params = {
+        "client": "web", "biz": "web_724",
+        "fastColumn": "102", "sortEnd": "",
+        "pageSize": str(page_size),
+        "req_trace": str(uuid.uuid4()),
+    }
+    headers = {"Referer": "https://kuaixun.eastmoney.com/"}
+    r = http_get(url, params=params, headers=headers, provider="eastmoney")
+    try:
+        d = r.json()
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to parse global news response: {e}", provider="eastmoney")
+
+    rows = []
+    for item in (d.get("data") or {}).get("fastNewsList", []):
+        rows.append({
+            "title": item.get("title", ""),
+            "summary": item.get("summary", "")[:200],
+            "time": item.get("showTime", ""),
         })
     return rows
