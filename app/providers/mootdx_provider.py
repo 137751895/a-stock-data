@@ -69,3 +69,49 @@ def fetch_f10(code: str, category: str = "公司概况") -> str:
 def fetch_f10_announcement(code: str) -> str:
     """Fetch latest announcement summary from mootdx F10 '最新提示' section."""
     return fetch_f10(code, category="最新提示")
+
+
+# category mapping: human-readable → mootdx int
+KLINE_CATEGORY_MAP = {
+    "daily": 4,
+    "weekly": 5,
+    "monthly": 6,
+    "1min": 7,
+    "5min": 8,
+    "15min": 9,
+    "30min": 10,
+    "60min": 11,
+}
+
+
+def fetch_mootdx_kline(
+    code: str,
+    category: str = "daily",
+    offset: int = 100,
+) -> list[dict]:
+    """Fetch K-line bars via mootdx TCP.
+
+    Args:
+        code: 6-digit stock code.
+        category: One of daily/weekly/monthly/1min/5min/15min/30min/60min.
+        offset: Number of bars to return (max ~800).
+
+    Returns list of dicts with keys: open, close, high, low, vol, amount, datetime.
+    """
+    cat_int = KLINE_CATEGORY_MAP.get(category)
+    if cat_int is None:
+        raise DependencyUnavailableError(
+            f"Invalid kline category: '{category}'. "
+            f"Must be one of: {', '.join(KLINE_CATEGORY_MAP)}",
+        )
+
+    client = _get_client()
+    try:
+        df = client.bars(symbol=code, category=cat_int, offset=offset)
+    except Exception as e:
+        raise DependencyUnavailableError(f"mootdx bars query failed: {e}")
+
+    if df is None or df.empty:
+        return []
+
+    return df.to_dict(orient="records")

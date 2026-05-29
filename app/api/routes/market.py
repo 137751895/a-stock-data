@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query
 
 from app.schemas.common import ApiResponse, success_response
-from app.services.market_service import get_quotes, get_kline
+from app.services.market_service import get_quotes, get_kline, get_mootdx_kline
 
 router = APIRouter()
 
@@ -19,3 +19,13 @@ def quote(codes: str = Query(..., description="Comma-separated stock codes, e.g.
 def kline(code: str):
     data = get_kline(code)
     return success_response(data=data, source=["baidu"])
+
+
+@router.get("/mootdx-kline/{code}", response_model=ApiResponse)
+def mootdx_kline(
+    code: str,
+    category: str = Query("daily", description="K-line period: daily/weekly/monthly/1min/5min/15min/30min/60min"),
+    offset: int = Query(100, description="Number of bars to return", ge=1, le=800),
+):
+    data = get_mootdx_kline(code, category=category, offset=offset)
+    return success_response(data=data, source=["mootdx"])

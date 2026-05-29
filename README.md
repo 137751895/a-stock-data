@@ -80,6 +80,7 @@ pytest tests/
 | `/api/v1/announcements/{code}` | GET | 巨潮 cninfo | ✅ |
 | `/api/v1/financial-report/{code}` | GET | 新浪财经 | ✅ |
 | `/api/v1/concept-blocks/{code}` | GET | 百度股市通 | ✅ |
+| `/api/v1/mootdx-kline/{code}` | GET | mootdx TCP | ⚠️ 已接线待TCP |
 | `/api/v1/finance-snapshot/{code}` | GET | mootdx TCP | ⚠️ 已接线待TCP |
 | `/api/v1/f10/{code}` | GET | mootdx TCP | ⚠️ 已接线待TCP |
 | `/api/v1/f10-announcement/{code}` | GET | mootdx TCP | ⚠️ 已接线待TCP |
@@ -146,7 +147,7 @@ pytest tests/
 
 | Layer | SKILL.md 功能 | API 状态 | 说明 |
 |-------|--------------|----------|------|
-| **1 行情** | mootdx K线/盘口/逐笔 | ⚠️ 已接线待TCP | finance-snapshot 仅覆盖财务快照，非 K线/盘口/逐笔 |
+| **1 行情** | mootdx K线/盘口/逐笔 | ⚠️ 已接线待TCP | K线已暴露为 `/api/v1/mootdx-kline/{code}`，盘口/逐笔尚未暴露 |
 | **1 行情** | 腾讯 PE/PB/市值/实时行情 | ✅ 已实现并验证 | `/api/v1/quote` |
 | **1 行情** | 百度K线(带MA) | ✅ 已实现并验证 | `/api/v1/kline/{code}` |
 | **2 研报** | 东财研报列表+PDF URL | ✅ 已实现并验证 | `/api/v1/reports/{code}` 每条含 pdf_url 字段 |
@@ -180,7 +181,7 @@ pytest tests/
 **统计:**
 - ✅ 已实现并验证: 22 项（含北向历史缓存新端点）
 - ⚠️ 仅mock验证: 3 项（THS热点+THS北向实时+THS一致预期，代码完整但 THS 上游未实网验证）
-- ⚠️ 已接线待TCP: 3 项（mootdx 财务/F10/公告，需 TCP 7709 可达环境）
+- ⚠️ 已接线待TCP: 3 项（mootdx 财务/F10/公告，需 TCP 7709 可达环境）+ K线端点新增
 - ⚠️ 已接线待Key: 1 项（iwencai，需 IWENCAI_API_KEY）
 
 > **诚实声明：** "已实现并验证"仅指 HTTP 数据源端点已通过 mock + contract + integration 三层测试，
