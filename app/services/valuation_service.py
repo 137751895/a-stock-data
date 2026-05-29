@@ -1,9 +1,15 @@
 
+from app.core.errors import AppError
 from app.core.normalize import validate_code
 from app.domain.parsing import parse_ths_eps_table, extract_eps_from_df
 from app.domain.valuation import forward_pe, pe_digestion, calc_peg
 from app.providers.tencent import fetch_quotes
 from app.providers.ths import fetch_eps_forecast
+
+# Errors that are safe to degrade into warnings (partial availability).
+# AppError covers all upstream HTTP/schema/auth errors.
+# Network-level errors may also occur outside our http wrapper.
+_DEGRADABLE = (AppError, ConnectionError, TimeoutError, ValueError)
 
 
 def get_valuation(code: str) -> dict:
@@ -11,6 +17,7 @@ def get_valuation(code: str) -> dict:
 
     Aggregates Tencent quote + THS EPS forecast + valuation calculations.
     Returns partial results with warnings if some sources fail.
+    Programming errors (TypeError, KeyError, etc.) are NOT swallowed.
     """
     code = validate_code(code)
     warnings = []
@@ -25,7 +32,7 @@ def get_valuation(code: str) -> dict:
         result["mcap_yi"] = quote.get("mcap_yi", 0)
         result["pe_ttm"] = quote.get("pe_ttm", 0)
         result["pb"] = quote.get("pb", 0)
-    except Exception as e:
+    except _DEGRADABLE as e:
         warnings.append(f"Failed to fetch quote: {e}")
         result["price"] = 0
 
@@ -35,7 +42,7 @@ def get_valuation(code: str) -> dict:
         ths_result = fetch_eps_forecast(code)
         df = parse_ths_eps_table(ths_result["html"])
         eps_data = extract_eps_from_df(df)
-    except Exception as e:
+    except _DEGRADABLE as e:
         warnings.append(f"Failed to fetch EPS forecast: {e}")
 
     result["eps_cur"] = eps_data["eps_cur"]

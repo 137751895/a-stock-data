@@ -33,9 +33,10 @@ def test_valuation_returns_200(mock_eps, mock_parse, mock_ths, mock_quotes):
 
 
 @patch("app.services.valuation_service.fetch_quotes", return_value=MOCK_QUOTES)
-@patch("app.services.valuation_service.fetch_eps_forecast", side_effect=Exception("THS down"))
+@patch("app.services.valuation_service.fetch_eps_forecast",
+       side_effect=ConnectionError("THS down"))
 def test_valuation_partial_failure_returns_warnings(mock_ths, mock_quotes):
-    """When THS fails, valuation should still return with warnings, not 500."""
+    """When THS fails with a degradable error, valuation should still return with warnings."""
     response = client.get("/api/v1/valuation/600519")
     assert response.status_code == 200
     data = response.json()
