@@ -60,37 +60,39 @@ pytest tests/
 |------|------|--------|------|
 | `/api/v1/health` | GET | self | ✅ |
 | `/api/v1/quote?codes=600519,000858` | GET | 腾讯财经 | ✅ |
-| `/api/v1/kline/{code}` | GET | 百度股市通 | ✅ 新增 |
+| `/api/v1/kline/{code}` | GET | 百度股市通 | ✅ |
 | `/api/v1/stock-info/{code}` | GET | 东财 push2 | ✅ +缓存 |
 | `/api/v1/valuation/{code}` | GET | 腾讯 + 同花顺 | ✅ |
-| `/api/v1/reports/{code}` | GET | 东财 reportapi | ✅ +缓存 |
+| `/api/v1/reports/{code}` | GET | 东财 reportapi | ✅ +缓存+PDF URL |
 | `/api/v1/fund-flow/minute/{code}` | GET | 东财 push2 | ✅ |
-| `/api/v1/fund-flow/daily/{code}` | GET | 东财 push2his | ✅ 新增 |
+| `/api/v1/fund-flow/daily/{code}` | GET | 东财 push2his | ✅ |
 | `/api/v1/margin/{code}` | GET | 东财 datacenter | ✅ |
-| `/api/v1/block-trade/{code}` | GET | 东财 datacenter | ✅ 新增 |
-| `/api/v1/holder-num/{code}` | GET | 东财 datacenter | ✅ 新增 |
-| `/api/v1/dividend/{code}` | GET | 东财 datacenter | ✅ 新增 |
-| `/api/v1/billboard/{code}` | GET | 东财 datacenter | ✅ 新增 |
-| `/api/v1/billboard/daily` | GET | 东财 datacenter | ✅ 新增 |
-| `/api/v1/lockup/{code}` | GET | 东财 datacenter | ✅ 新增 |
-| `/api/v1/industry-ranking` | GET | 东财 push2 | ✅ 新增 |
+| `/api/v1/block-trade/{code}` | GET | 东财 datacenter | ✅ |
+| `/api/v1/holder-num/{code}` | GET | 东财 datacenter | ✅ |
+| `/api/v1/dividend/{code}` | GET | 东财 datacenter | ✅ |
+| `/api/v1/billboard/{code}` | GET | 东财 datacenter | ✅ |
+| `/api/v1/billboard/daily` | GET | 东财 datacenter | ✅ |
+| `/api/v1/lockup/{code}` | GET | 东财 datacenter | ✅ |
+| `/api/v1/industry-ranking` | GET | 东财 push2 | ✅ |
 | `/api/v1/news/{code}` | GET | 东财 search-api | ✅ |
-| `/api/v1/telegraph` | GET | 财联社 cls.cn | ✅ 新增 |
-| `/api/v1/global-news` | GET | 东财 np-weblist | ✅ 新增 |
+| `/api/v1/telegraph` | GET | 财联社 cls.cn | ✅ |
+| `/api/v1/global-news` | GET | 东财 np-weblist | ✅ |
 | `/api/v1/announcements/{code}` | GET | 巨潮 cninfo | ✅ |
-| `/api/v1/financial-report/{code}` | GET | 新浪财经 | ✅ 新增 |
-| `/api/v1/concept-blocks/{code}` | GET | 百度股市通 | ✅ 新增 |
-| `/api/v1/finance-snapshot/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
-| `/api/v1/f10/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
-| `/api/v1/f10-announcement/{code}` | GET | mootdx TCP | ⚠️ 待TCP |
-| `/api/v1/iwencai-search` | GET | iwencai | ⚠️ 待Key |
-| `/api/v1/hot-stocks` | GET | 同花顺 | ⚠️ 待反爬验证 |
-| `/api/v1/northbound` | GET | 同花顺 | ⚠️ 待反爬验证 |
+| `/api/v1/financial-report/{code}` | GET | 新浪财经 | ✅ |
+| `/api/v1/concept-blocks/{code}` | GET | 百度股市通 | ✅ |
+| `/api/v1/finance-snapshot/{code}` | GET | mootdx TCP | ⚠️ 已接线待TCP |
+| `/api/v1/f10/{code}` | GET | mootdx TCP | ⚠️ 已接线待TCP |
+| `/api/v1/f10-announcement/{code}` | GET | mootdx TCP | ⚠️ 已接线待TCP |
+| `/api/v1/iwencai-search` | GET | iwencai | ⚠️ 已接线待Key |
+| `/api/v1/hot-stocks` | GET | 同花顺 | ⚠️ 仅mock验证 |
+| `/api/v1/northbound` | GET | 同花顺 | ⚠️ 仅mock验证 |
+| `/api/v1/northbound/history` | GET | 本地缓存 | ✅ |
 
 ### 响应格式
 
-所有接口返回统一 envelope：
+所有接口返回统一 envelope（成功和失败结构一致）：
 
+**成功响应:**
 ```json
 {
   "success": true,
@@ -99,9 +101,26 @@ pytest tests/
   "source": ["tencent"],
   "cached": false,
   "warnings": [],
-  "fetched_at": "2026-05-28T10:30:00+00:00"
+  "fetched_at": "2026-05-29T01:00:00+00:00",
+  "error": null
 }
 ```
+
+**错误响应:**
+```json
+{
+  "success": false,
+  "request_id": "uuid",
+  "data": null,
+  "source": [],
+  "cached": false,
+  "warnings": [],
+  "fetched_at": "2026-05-29T01:00:00+00:00",
+  "error": {"code": "UPSTREAM_HTTP_ERROR", "message": "...", "provider": "eastmoney"}
+}
+```
+
+> 注意：错误响应和成功响应具有完全相同的顶层字段结构，便于客户端统一解析。
 
 ### 环境变量
 
@@ -117,64 +136,68 @@ pytest tests/
 
 ### 设计与实现对比审计表
 
-对照 SKILL.md 28 个端点，当前 API 服务的实现状态：
+对照 SKILL.md 能力，当前 API 服务的实现状态。
+
+**状态词定义：**
+- ✅ 已实现并验证 — mock+contract+integration 测试通过，HTTP 数据源已验证
+- ⚠️ 仅mock验证 — 代码完整、mock 测试通过，但未经真实上游验证
+- ⚠️ 已接线待TCP — 代码+mock 通过，需 mootdx TCP 7709 可达环境
+- ⚠️ 已接线待Key — 代码+mock 通过，需 IWENCAI_API_KEY 环境变量
 
 | Layer | SKILL.md 功能 | API 状态 | 说明 |
 |-------|--------------|----------|------|
-| **1 行情** | mootdx K线/盘口/逐笔 | ⚠️ 已接线待TCP | `/api/v1/finance-snapshot/{code}` 需 mootdx TCP |
-| **1 行情** | 腾讯 PE/PB/市值/实时行情 | ✅ 已实现 | `/api/v1/quote` |
-| **1 行情** | 腾讯 指数/ETF 行情 | ⚠️ 半实现 | quote 接口可传指数代码 |
-| **1 行情** | 百度K线(带MA) | ✅ 已实现 | `/api/v1/kline/{code}` |
-| **2 研报** | 东财研报列表+PDF | ✅ 已实现 | `/api/v1/reports/{code}` +30分钟缓存 |
-| **2 研报** | 同花顺一致预期EPS | ✅ 已实现 | 内嵌于 `/api/v1/valuation/{code}` |
+| **1 行情** | mootdx K线/盘口/逐笔 | ⚠️ 已接线待TCP | finance-snapshot 仅覆盖财务快照，非 K线/盘口/逐笔 |
+| **1 行情** | 腾讯 PE/PB/市值/实时行情 | ✅ 已实现并验证 | `/api/v1/quote` |
+| **1 行情** | 百度K线(带MA) | ✅ 已实现并验证 | `/api/v1/kline/{code}` |
+| **2 研报** | 东财研报列表+PDF URL | ✅ 已实现并验证 | `/api/v1/reports/{code}` 每条含 pdf_url 字段 |
+| **2 研报** | 同花顺一致预期EPS | ⚠️ 仅mock验证 | 内嵌于 valuation，THS 上游未实网验证 |
 | **2 研报** | iwencai NL语义搜索 | ⚠️ 已接线待Key | `/api/v1/iwencai-search` 需 IWENCAI_API_KEY |
-| **3 信号** | 同花顺热点强势股 | ⚠️ 已实现待反爬验证 | `/api/v1/hot-stocks` THS API可能有反爬 |
-| **3 信号** | 同花顺北向资金 | ⚠️ 已实现待反爬验证 | `/api/v1/northbound` THS API可能有反爬 |
-| **3 信号** | 百度概念板块 | ✅ 已实现 | `/api/v1/concept-blocks/{code}` |
-| **3 信号** | 东财资金流(分钟) | ✅ 已实现 | `/api/v1/fund-flow/minute/{code}` |
-| **3 信号** | 龙虎榜席位 | ✅ 已实现 | `/api/v1/billboard/{code}` |
-| **3 信号** | 限售解禁日历 | ✅ 已实现 | `/api/v1/lockup/{code}` |
-| **3 信号** | 行业板块排名 | ✅ 已实现 | `/api/v1/industry-ranking` |
-| **3 信号** | 全市场龙虎榜 | ✅ 已实现 | `/api/v1/billboard/daily` |
-| **4 资金面** | 融资融券明细 | ✅ 已实现 | `/api/v1/margin/{code}` 已标准化字段 |
-| **4 资金面** | 大宗交易 | ✅ 已实现 | `/api/v1/block-trade/{code}` |
-| **4 资金面** | 股东户数变化 | ✅ 已实现 | `/api/v1/holder-num/{code}` |
-| **4 资金面** | 分红送转历史 | ✅ 已实现 | `/api/v1/dividend/{code}` |
-| **4 资金面** | 资金流120日 | ✅ 已实现 | `/api/v1/fund-flow/daily/{code}` |
-| **5 新闻** | 东财个股新闻 | ✅ 已实现 | `/api/v1/news/{code}` |
-| **5 新闻** | 财联社快讯 | ✅ 已实现 | `/api/v1/telegraph` |
-| **5 新闻** | 东财全球资讯 | ✅ 已实现 | `/api/v1/global-news` |
-| **6 基础** | mootdx 财务快照 | ⚠️ 已接线待TCP | `/api/v1/finance-snapshot/{code}` 需 mootdx TCP |
-| **6 基础** | mootdx F10 | ⚠️ 已接线待TCP | `/api/v1/f10/{code}` 需 mootdx TCP |
-| **6 基础** | 东财个股基本面 | ✅ 已实现 | `/api/v1/stock-info/{code}` +10分钟缓存 |
-| **6 基础** | 新浪财报三表 | ✅ 已实现 | `/api/v1/financial-report/{code}` |
-| **7 公告** | 巨潮公告 | ✅ 已实现 | `/api/v1/announcements/{code}` |
-| **7 公告** | mootdx F10 公告 | ⚠️ 已接线待TCP | `/api/v1/f10-announcement/{code}` 需 mootdx TCP |
-| **估值** | forward PE / PEG / PE消化 | ✅ 已实现 | `/api/v1/valuation/{code}` |
+| **3 信号** | 同花顺热点强势股 | ⚠️ 仅mock验证 | `/api/v1/hot-stocks` THS 上游未实网验证 |
+| **3 信号** | 同花顺北向资金(实时) | ⚠️ 仅mock验证 | `/api/v1/northbound` THS 上游未实网验证 |
+| **3 信号** | 同花顺北向资金(历史缓存) | ✅ 已实现并验证 | `/api/v1/northbound/history` 本地文件缓存 |
+| **3 信号** | 百度概念板块 | ✅ 已实现并验证 | `/api/v1/concept-blocks/{code}` |
+| **3 信号** | 东财资金流(分钟) | ✅ 已实现并验证 | `/api/v1/fund-flow/minute/{code}` |
+| **3 信号** | 龙虎榜席位 | ✅ 已实现并验证 | `/api/v1/billboard/{code}` |
+| **3 信号** | 限售解禁日历 | ✅ 已实现并验证 | `/api/v1/lockup/{code}` |
+| **3 信号** | 行业板块排名 | ✅ 已实现并验证 | `/api/v1/industry-ranking` |
+| **3 信号** | 全市场龙虎榜 | ✅ 已实现并验证 | `/api/v1/billboard/daily` |
+| **4 资金面** | 融资融券明细 | ✅ 已实现并验证 | `/api/v1/margin/{code}` |
+| **4 资金面** | 大宗交易 | ✅ 已实现并验证 | `/api/v1/block-trade/{code}` |
+| **4 资金面** | 股东户数变化 | ✅ 已实现并验证 | `/api/v1/holder-num/{code}` |
+| **4 资金面** | 分红送转历史 | ✅ 已实现并验证 | `/api/v1/dividend/{code}` |
+| **4 资金面** | 资金流120日 | ✅ 已实现并验证 | `/api/v1/fund-flow/daily/{code}` |
+| **5 新闻** | 东财个股新闻 | ✅ 已实现并验证 | `/api/v1/news/{code}` |
+| **5 新闻** | 财联社快讯 | ✅ 已实现并验证 | `/api/v1/telegraph` |
+| **5 新闻** | 东财全球资讯 | ✅ 已实现并验证 | `/api/v1/global-news` |
+| **6 基础** | mootdx 财务快照 | ⚠️ 已接线待TCP | `/api/v1/finance-snapshot/{code}` 需 TCP 7709 |
+| **6 基础** | mootdx F10 | ⚠️ 已接线待TCP | `/api/v1/f10/{code}` 需 TCP 7709 |
+| **6 基础** | 东财个股基本面 | ✅ 已实现并验证 | `/api/v1/stock-info/{code}` +10分钟缓存 |
+| **6 基础** | 新浪财报三表 | ✅ 已实现并验证 | `/api/v1/financial-report/{code}` |
+| **7 公告** | 巨潮公告 | ✅ 已实现并验证 | `/api/v1/announcements/{code}` |
+| **7 公告** | mootdx F10 公告 | ⚠️ 已接线待TCP | `/api/v1/f10-announcement/{code}` 需 TCP 7709 |
+| **估值** | forward PE / PEG / PE消化 | ✅ 已实现并验证 | `/api/v1/valuation/{code}` |
 
-**统计:** 已实现 22/28，半实现 6/28（含3项mootdx已接线待TCP+1项iwencai待Key+2项THS待反爬验证），未实现 0/28。
+**统计:**
+- ✅ 已实现并验证: 22 项（含北向历史缓存新端点）
+- ⚠️ 仅mock验证: 3 项（THS热点+THS北向实时+THS一致预期，代码完整但 THS 上游未实网验证）
+- ⚠️ 已接线待TCP: 3 项（mootdx 财务/F10/公告，需 TCP 7709 可达环境）
+- ⚠️ 已接线待Key: 1 项（iwencai，需 IWENCAI_API_KEY）
 
-**所有 28 项能力均已工程接入。** 其中：
-- 22 项已完全实现并验证
-- 3 项 mootdx 已接线待 TCP 验证 — 代码、mock 测试已通过，真实 TCP 需部署环境
-- 1 项 iwencai 已接线待 API Key — 代码、mock 测试已通过，需 IWENCAI_API_KEY
-- 2 项 THS 信号已实现待反爬验证 — 代码、mock 测试已通过，实际 THS 服务器可能有反爬限制
+> **诚实声明：** "已实现并验证"仅指 HTTP 数据源端点已通过 mock + contract + integration 三层测试，
+> 且该数据源在可达网络环境中验证过返回结构正确。mootdx/iwencai/THS 三类数据源因环境限制
+>（TCP 端口 / API Key / DNS 可达性）未完成真实上游验证，严格标注为对应阻塞状态。
 
-**本轮工程完善清单:**
-1. ✅ HTTP retry 机制接入 — `HTTPAdapter` + `urllib3.Retry`，自动重试 500/502/503/504
-2. ✅ 文件缓存层实现 — `cache_dir` 配置生效，stock-info (10min) + reports (30min)
-3. ✅ fund_flow CSV 解析异常保护 — 畸形行跳过不崩溃
-4. ✅ http_post 失败路径覆盖 — cninfo POST timeout/connection/500/JSON 解析
-5. ✅ tencent provider 失败路径覆盖 — timeout/connection/403/decode
-6. ✅ valuation cagr=0 / 负cagr 边界测试
-7. ✅ 新增 12 个端点（信号层 4 + 资金面 4 + 新闻层 2 + 行情层 1 + 基础层 1）
-8. ✅ 178 测试全部通过 (131→178)
-9. ✅ 百度概念板块 `/api/v1/concept-blocks/{code}` — 行业/概念/地域三维归属
-10. ✅ mootdx 三端点工程接入 — finance-snapshot/f10/f10-announcement，可选依赖+优雅降级
-11. ✅ iwencai 语义搜索接入 — `/api/v1/iwencai-search`，API Key 校验+X-Claw 鉴权
-12. ✅ THS 热点强势股 `/api/v1/hot-stocks` — 当日强势股+题材归因
-13. ✅ THS 北向资金 `/api/v1/northbound` — 实时分钟级沪深股通流向
-14. ✅ 231 测试全部通过 (178→231)
+**本轮工程修复清单:**
+1. ✅ cache TTL 修复 — `>` 改为 `>=`，TTL=0 在任何时间精度下都立即失效
+2. ✅ 错误 envelope 统一 — `app_error_handler` 现在使用 `error_response()`，错误响应包含全部 8 个顶层字段
+3. ✅ 错误 envelope 回归测试 — 新增 6 个测试验证 `request_id`/`fetched_at`/`data`/`source`/`cached` 字段
+4. ✅ valuation 异常收窄 — `except Exception` 改为 `except _DEGRADABLE`，只降级网络/上游错误
+5. ✅ 研报 PDF URL — 每条研报记录包含 `pdf_url` 字段，基于 `infoCode` 拼接东财 PDF 下载地址
+6. ✅ fetch_reports sleep 文档化 — 0.3s 延迟是限速设计，非 bug
+7. ✅ 北向资金历史缓存 — `/api/v1/northbound/history` 读取本地日级缓存，realtime 自动写入
+8. ✅ response_model 落地 — 所有路由端点添加 `response_model=ApiResponse`，OpenAPI schema 完整
+9. ✅ README 审计表修正 — 严格区分已验证/仅mock/待TCP/待Key，不再虚报完成度
+10. ✅ 243 测试全部通过 (231→243)
 
 ---
 
