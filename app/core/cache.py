@@ -47,7 +47,7 @@ def cache_get(namespace: str, key: str, ttl_seconds: int) -> dict | list | None:
     try:
         with open(cache_file, "r", encoding="utf-8") as f:
             entry = json.load(f)
-        if time.time() - entry.get("ts", 0) > ttl_seconds:
+        if time.time() - entry.get("ts", 0) >= ttl_seconds:
             cache_file.unlink(missing_ok=True)
             return None
         return entry.get("data")

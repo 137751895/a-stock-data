@@ -66,6 +66,22 @@ class TestCacheBasics:
                 assert result == data
                 assert len(result) == 2
 
+    def test_cache_ttl_zero_always_expired_even_same_instant(self):
+        """TTL=0 must expire even if read in the exact same timestamp as write."""
+        import json
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("app.core.config.settings.cache_dir", tmpdir):
+                cache_set("test", "instant", {"v": 1})
+                # Manually set ts to current time to simulate same-instant read
+                from app.core.cache import _cache_key
+                cache_file = Path(tmpdir) / _cache_key("test", "instant")
+                with open(cache_file, "r") as f:
+                    entry = json.load(f)
+                # Patch time.time to return exactly the cached ts
+                with patch("app.core.cache.time.time", return_value=entry["ts"]):
+                    result = cache_get("test", "instant", ttl_seconds=0)
+                    assert result is None, "TTL=0 must always expire, even at exact same timestamp"
+
     def test_cache_key_is_deterministic(self):
         k1 = _cache_key("ns", "key")
         k2 = _cache_key("ns", "key")
