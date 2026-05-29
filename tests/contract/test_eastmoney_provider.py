@@ -7,6 +7,7 @@ from app.providers.eastmoney import (
     fetch_fund_flow_minute,
     fetch_margin_trading,
     fetch_stock_news,
+    report_pdf_url,
 )
 
 
@@ -40,12 +41,30 @@ def test_fetch_reports_returns_list():
     responses.add(
         responses.GET,
         "https://reportapi.eastmoney.com/report/list",
-        json={"data": [{"title": "Test Report", "publishDate": "2026-05-28"}], "TotalPage": 1},
+        json={"data": [{"title": "Test Report", "publishDate": "2026-05-28", "infoCode": "AP202605281234"}], "TotalPage": 1},
         status=200,
     )
     result = fetch_reports("600519")
     assert len(result) == 1
     assert result[0]["title"] == "Test Report"
+    assert result[0]["pdf_url"] == "https://pdf.dfcfw.com/pdf/H3_AP202605281234_1.pdf"
+
+
+@responses.activate
+def test_fetch_reports_no_infocode_no_pdf_url():
+    """Reports without infoCode should not have pdf_url."""
+    responses.add(
+        responses.GET,
+        "https://reportapi.eastmoney.com/report/list",
+        json={"data": [{"title": "No PDF"}], "TotalPage": 1},
+        status=200,
+    )
+    result = fetch_reports("600519")
+    assert "pdf_url" not in result[0]
+
+
+def test_report_pdf_url_format():
+    assert report_pdf_url("AP202605281234") == "https://pdf.dfcfw.com/pdf/H3_AP202605281234_1.pdf"
 
 
 @responses.activate

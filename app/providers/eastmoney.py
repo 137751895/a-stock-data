@@ -61,8 +61,24 @@ def eastmoney_datacenter(report_name: str, columns: str = "ALL",
     return []
 
 
+PDF_URL_TPL = "https://pdf.dfcfw.com/pdf/H3_{info_code}_1.pdf"
+
+
+def report_pdf_url(info_code: str) -> str:
+    """Build Eastmoney research report PDF download URL.
+
+    Requires Referer: https://data.eastmoney.com/ when downloading.
+    """
+    return PDF_URL_TPL.format(info_code=info_code)
+
+
 def fetch_reports(code: str, max_pages: int = 5) -> list[dict]:
-    """Fetch research reports from Eastmoney reportapi."""
+    """Fetch research reports from Eastmoney reportapi.
+
+    Each record is enriched with a `pdf_url` field for direct PDF download.
+    The 0.3s inter-page delay is intentional rate limiting to avoid
+    overloading the Eastmoney reportapi (5 pages × 0.3s = 1.2s max).
+    """
     import time
 
     report_api = "https://reportapi.eastmoney.com/report/list"
@@ -86,6 +102,11 @@ def fetch_reports(code: str, max_pages: int = 5) -> list[dict]:
         rows = d.get("data") or []
         if not rows:
             break
+        # Enrich each record with PDF download URL
+        for row in rows:
+            info_code = row.get("infoCode", "")
+            if info_code:
+                row["pdf_url"] = report_pdf_url(info_code)
         all_records.extend(rows)
         if page >= (d.get("TotalPage", 1) or 1):
             break

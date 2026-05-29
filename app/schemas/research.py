@@ -11,3 +11,4 @@ class ReportItem(BaseModel):
     predictThisYearEps: float | None = None
     predictNextYearEps: float | None = None
     emRatingName: str = ""
+    pdf_url: str | None = None
