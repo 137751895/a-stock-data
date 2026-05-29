@@ -32,14 +32,12 @@ class ProviderAuthError(AppError):
 
 
 def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
-    error_body: dict = {"code": exc.code, "message": exc.message}
-    if exc.provider:
-        error_body["provider"] = exc.provider
+    from app.schemas.common import error_response
     return JSONResponse(
         status_code=exc.status_code,
-        content={
-            "success": False,
-            "error": error_body,
-            "warnings": [],
-        },
+        content=error_response(
+            code=exc.code,
+            message=exc.message,
+            provider=exc.provider,
+        ),
     )
