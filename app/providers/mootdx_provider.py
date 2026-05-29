@@ -115,3 +115,48 @@ def fetch_mootdx_kline(
         return []
 
     return df.to_dict(orient="records")
+
+
+def fetch_mootdx_quotes(codes: list[str]) -> list[dict]:
+    """Fetch real-time quotes with 5-level order book via mootdx TCP.
+
+    Args:
+        codes: List of 6-digit stock codes (e.g. ["688017", "300476"]).
+
+    Returns list of dicts with fields: price, open, high, low, last_close,
+    bid1-bid5, ask1-ask5, bid_vol1-bid_vol5, ask_vol1-ask_vol5, vol, amount, servertime.
+    """
+    client = _get_client()
+    try:
+        df = client.quotes(symbol=codes)
+    except Exception as e:
+        raise DependencyUnavailableError(f"mootdx quotes query failed: {e}")
+
+    if df is None or df.empty:
+        return []
+
+    return df.to_dict(orient="records")
+
+
+def fetch_mootdx_transaction(code: str, date: str = "") -> list[dict]:
+    """Fetch tick-by-tick transactions via mootdx TCP.
+
+    Args:
+        code: 6-digit stock code.
+        date: Date string YYYYMMDD. Empty string = today (may return empty outside trading hours).
+
+    Returns list of dicts with keys: time, price, vol, num, buyorsell (0=buy/1=sell/2=neutral).
+    """
+    client = _get_client()
+    kwargs: dict = {"symbol": code}
+    if date:
+        kwargs["date"] = date
+    try:
+        df = client.transaction(**kwargs)
+    except Exception as e:
+        raise DependencyUnavailableError(f"mootdx transaction query failed: {e}")
+
+    if df is None or df.empty:
+        return []
+
+    return df.to_dict(orient="records")

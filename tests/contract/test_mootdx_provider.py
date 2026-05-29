@@ -176,3 +176,137 @@ class TestFetchMootdxKline:
         from app.providers.mootdx_provider import fetch_mootdx_kline
         fetch_mootdx_kline("688017", category="weekly")
         mock_client.bars.assert_called_once_with(symbol="688017", category=5, offset=100)
+
+
+class TestFetchMootdxQuotes:
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_returns_records(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_df = MagicMock()
+        mock_df.empty = False
+        mock_df.to_dict.return_value = [
+            {"price": 50.0, "open": 49.5, "high": 51.0, "low": 49.0,
+             "last_close": 49.8, "bid1": 49.9, "ask1": 50.1,
+             "vol": 200000, "amount": 10000000.0}
+        ]
+        mock_client.quotes.return_value = mock_df
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_quotes
+        result = fetch_mootdx_quotes(["688017"])
+        assert len(result) == 1
+        assert result[0]["price"] == 50.0
+        mock_client.quotes.assert_called_once_with(symbol=["688017"])
+
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_returns_empty_for_no_data(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_client.quotes.return_value = None
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_quotes
+        result = fetch_mootdx_quotes(["688017"])
+        assert result == []
+
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_returns_empty_for_empty_df(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_df = MagicMock()
+        mock_df.empty = True
+        mock_client.quotes.return_value = mock_df
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_quotes
+        result = fetch_mootdx_quotes(["688017"])
+        assert result == []
+
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_raises_on_query_failure(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_client.quotes.side_effect = RuntimeError("TCP error")
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_quotes
+        with pytest.raises(DependencyUnavailableError, match="quotes query failed"):
+            fetch_mootdx_quotes(["688017"])
+
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_multiple_codes(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_df = MagicMock()
+        mock_df.empty = False
+        mock_df.to_dict.return_value = [
+            {"price": 50.0}, {"price": 30.0}
+        ]
+        mock_client.quotes.return_value = mock_df
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_quotes
+        result = fetch_mootdx_quotes(["688017", "300476"])
+        assert len(result) == 2
+        mock_client.quotes.assert_called_once_with(symbol=["688017", "300476"])
+
+
+class TestFetchMootdxTransaction:
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_returns_records(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_df = MagicMock()
+        mock_df.empty = False
+        mock_df.to_dict.return_value = [
+            {"time": "09:30:01", "price": 50.0, "vol": 100, "num": 5, "buyorsell": 0}
+        ]
+        mock_client.transaction.return_value = mock_df
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_transaction
+        result = fetch_mootdx_transaction("688017", date="20260528")
+        assert len(result) == 1
+        assert result[0]["price"] == 50.0
+        assert result[0]["buyorsell"] == 0
+        mock_client.transaction.assert_called_once_with(symbol="688017", date="20260528")
+
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_no_date_means_today(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_df = MagicMock()
+        mock_df.empty = False
+        mock_df.to_dict.return_value = []
+        mock_client.transaction.return_value = mock_df
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_transaction
+        fetch_mootdx_transaction("688017")
+        mock_client.transaction.assert_called_once_with(symbol="688017")
+
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_returns_empty_for_no_data(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_client.transaction.return_value = None
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_transaction
+        result = fetch_mootdx_transaction("688017")
+        assert result == []
+
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_returns_empty_for_empty_df(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_df = MagicMock()
+        mock_df.empty = True
+        mock_client.transaction.return_value = mock_df
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_transaction
+        result = fetch_mootdx_transaction("688017")
+        assert result == []
+
+    @patch("app.providers.mootdx_provider._get_client")
+    def test_raises_on_query_failure(self, mock_client_factory):
+        mock_client = MagicMock()
+        mock_client.transaction.side_effect = RuntimeError("TCP error")
+        mock_client_factory.return_value = mock_client
+
+        from app.providers.mootdx_provider import fetch_mootdx_transaction
+        with pytest.raises(DependencyUnavailableError, match="transaction query failed"):
+            fetch_mootdx_transaction("688017")
