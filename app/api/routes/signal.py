@@ -9,6 +9,7 @@ from app.services.signal_service import (
     get_lockup_expiry,
     get_industry_ranking,
     get_northbound_realtime,
+    get_northbound_history,
 )
 
 router = APIRouter()
@@ -54,3 +55,9 @@ def hot_stocks(date: str = Query(None, description="YYYY-MM-DD, defaults to toda
 def northbound():
     data = get_northbound_realtime()
     return success_response(data=data, source=["ths"])
+
+
+@router.get("/northbound/history")
+def northbound_history(days: int = Query(30, ge=1, le=365, description="Number of days")):
+    data = get_northbound_history(days=days)
+    return success_response(data=data, source=["ths"], cached=True)

@@ -1,5 +1,6 @@
 """Signal layer services: dragon tiger board, lockup expiry, industry ranking, concept blocks, hot stocks, northbound."""
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from app.core.normalize import validate_code
 from app.providers.baidu import fetch_concept_blocks
@@ -164,6 +165,7 @@ def get_hot_stocks(date: str | None = None) -> dict:
 def get_northbound_realtime() -> dict:
     """Get northbound capital realtime minute-level flow.
 
+    Also writes a daily summary snapshot to cache for history retrieval.
     Returns: {points: int, data: [{time, hgt_yi, sgt_yi}, ...]}
     """
     raw = fetch_northbound_realtime()
@@ -179,4 +181,68 @@ def get_northbound_realtime() -> dict:
             "sgt_yi": sgt[i] if i < len(sgt) else None,
         })
 
-    return {"points": len(data), "data": data}
+    result = {"points": len(data), "data": data}
+
+    # Cache daily summary for history endpoint
+    if data:
+        today = datetime.now().strftime("%Y-%m-%d")
+        last = data[-1]
+        summary = {
+            "date": today,
+            "hgt_yi": last.get("hgt_yi"),
+            "sgt_yi": last.get("sgt_yi"),
+            "points": len(data),
+        }
+        _save_northbound_daily(today, summary)
+
+    return result
+
+
+def _northbound_history_dir() -> Path | None:
+    """Return northbound history directory, or None if cache disabled."""
+    from app.core.config import settings
+    if not settings.cache_dir:
+        return None
+    p = Path(settings.cache_dir) / "northbound_history"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _save_northbound_daily(date: str, summary: dict) -> None:
+    """Persist daily northbound summary to local cache file."""
+    import json
+    history_dir = _northbound_history_dir()
+    if history_dir is None:
+        return
+    filepath = history_dir / f"{date}.json"
+    try:
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(summary, f, ensure_ascii=False)
+    except OSError:
+        pass
+
+
+def get_northbound_history(days: int = 30) -> dict:
+    """Read cached northbound daily history.
+
+    Returns: {total: int, data: [{date, hgt_yi, sgt_yi, points}, ...]}
+    """
+    import json
+    history_dir = _northbound_history_dir()
+    if history_dir is None:
+        return {"total": 0, "data": []}
+
+    records = []
+    try:
+        files = sorted(history_dir.glob("*.json"), reverse=True)[:days]
+    except OSError:
+        return {"total": 0, "data": []}
+
+    for filepath in files:
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                records.append(json.load(f))
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    return {"total": len(records), "data": records}
