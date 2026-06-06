@@ -45,10 +45,10 @@ A 股全栈数据 · 七层架构 · V4.0
 │
 ├── 行情层    mootdx + 腾讯财经 + 百度K线   K线(带MA5/10/20) + 五档盘口 + PE/PB/市值 + 指数/ETF
 ├── 研报层    东财 reportapi + 同花顺 + iwencai  研报列表 / PDF下载 / 一致预期 / NL搜索
-├── 信号层    同花顺 + 百度股市通 + 东财     强势股 + 题材归因 + 北向资金 + 概念板块
+├── 信号层    同花顺 + 东财                  强势股 + 题材归因 + 北向资金 + 板块归属
 │                                           + 资金流向(push2) + 龙虎榜 + 全市场龙虎榜 + 解禁 + 行业对比
 ├── 资金面    东财 datacenter + push2        融资融券 + 大宗交易 + 股东户数 + 分红送转 + 资金流(分钟+120日)
-├── 新闻层    东财 + 财联社（直连HTTP）      个股新闻 / 财联社快讯 / 全球资讯
+├── 新闻层    东财（直连HTTP）              个股新闻 / 全球资讯（财联社快讯已下线 #14）
 ├── 基础数据  mootdx + 东财 + 新浪           季报37字段 / F10九大类 / 财报三表
 └── 公告层    巨潮 cninfo + mootdx           沪深北全量公告
 ```
@@ -156,12 +156,12 @@ a-stock-data/
 │   │   └── signal_service.py     # 信号服务
 │   ├── providers/                # 数据源 Provider
 │   │   ├── tencent.py            # 腾讯财经（实时行情/PE/PB）
-│   │   ├── baidu.py              # 百度股市通（K线/概念板块）
+│   │   ├── baidu.py              # 百度股市通（K线）
 │   │   ├── eastmoney.py          # 东方财富（资金流/龙虎榜/融资融券等）
 │   │   ├── ths.py                # 同花顺（热点股/北向资金/一致预期）
 │   │   ├── sina.py               # 新浪财经（财报三表）
 │   │   ├── cninfo.py             # 巨潮（公告）
-│   │   ├── cls.py                # 财联社（快讯）
+│   │   ├── cls.py                # 财联社（快讯，已下线 #14）
 │   │   ├── iwencai.py            # iwencai（NL语义搜索）
 │   │   └── mootdx_provider.py   # mootdx（TCP K线/盘口/逐笔/财务/F10）
 │   ├── schemas/                  # Pydantic 数据模型
@@ -224,7 +224,7 @@ a-stock-data/
 | `/hot-stocks?date=2026-05-28` | GET | 同花顺 | 当日强势股 + 题材归因 reason tags |
 | `/northbound` | GET | 同花顺 | 沪/深股通实时分钟级净流入 |
 | `/northbound/history?days=30` | GET | 本地缓存 | 北向资金日级历史（自动积累） |
-| `/concept-blocks/{code}` | GET | 百度股市通 | 概念/行业/地域板块归属 |
+| `/concept-blocks/{code}` | GET | 东财 slist | 个股所属板块归属（行业/概念/地域混合 + BK码 + 涨跌幅 + 龙头股）|
 | `/billboard/{code}?trade_date=2026-05-28` | GET | 东财 | 龙虎榜席位 + 买卖TOP5 |
 | `/billboard/daily?trade_date=2026-05-28` | GET | 东财 | 全市场龙虎榜净买排名 |
 | `/lockup/{code}` | GET | 东财 | 限售解禁日历（历史+未来90天） |
@@ -246,7 +246,7 @@ a-stock-data/
 | 端点 | 方法 | 数据源 | 说明 |
 |------|------|--------|------|
 | `/news/{code}` | GET | 东财 search-api | 个股相关新闻 |
-| `/telegraph` | GET | 财联社 cls.cn | 分钟级快讯电报 |
+| `/telegraph` | GET | 财联社 cls.cn | ⚠️ 已下线（#14），改用 `/global-news` |
 | `/global-news` | GET | 东财 np-weblist | 全球财经资讯 |
 
 ### 基础数据层
@@ -383,7 +383,7 @@ AppError (base)
 自动判断市场前缀（sh/sz/bj），并提供各数据源的 symbol 格式转换：
 - `to_tencent_symbol("600519")` → `"sh600519"`
 - `to_eastmoney_secid("600519")` → `"1.600519"`
-- `to_cninfo_org_id("600519")` → `"gssh0600519"`
+- `to_cninfo_org_id("600519")` → `"gssh0600519"`（硬编码 fallback；优先动态查 `szse_stock.json` 真实 orgId，#19）
 
 ### `app/domain/valuation.py` — 估值计算
 
@@ -409,7 +409,7 @@ AppError (base)
 | 9 | 百度股市通 | HTTP | ❌ | 极低 |
 | 10 | 新浪财经 | HTTP | ❌ | 低 |
 | 11 | 同花顺一致预期 | HTTP | ❌（需UA） | 低 |
-| 12 | 财联社 | HTTP | ❌ | 低 |
+| 12 | 财联社 | HTTP | ❌ | ⚠️ 已下线（#14） |
 | 13 | 巨潮 cninfo | HTTP | ❌ | 低 |
 
 > **架构原则：** 除 mootdx（TCP 二进制协议）外，全部直连 HTTP API，零第三方数据封装依赖。
@@ -552,7 +552,7 @@ pytest tests/ -v --tb=short
 | **3 信号** | 同花顺热点强势股 | ⚠️ 仅mock验证 | `/hot-stocks` |
 | **3 信号** | 同花顺北向资金(实时) | ⚠️ 仅mock验证 | `/northbound` |
 | **3 信号** | 同花顺北向资金(历史) | ✅ 已实现并验证 | `/northbound/history` |
-| **3 信号** | 百度概念板块 | ✅ 已实现并验证 | `/concept-blocks/{code}` |
+| **3 信号** | 东财板块归属（slist） | ✅ 已实现并验证 | `/concept-blocks/{code}` |
 | **3 信号** | 东财资金流(分钟) | ✅ 已实现并验证 | `/fund-flow/minute/{code}` |
 | **3 信号** | 龙虎榜席位 | ✅ 已实现并验证 | `/billboard/{code}` |
 | **3 信号** | 限售解禁日历 | ✅ 已实现并验证 | `/lockup/{code}` |
@@ -564,7 +564,7 @@ pytest tests/ -v --tb=short
 | **4 资金面** | 分红送转历史 | ✅ 已实现并验证 | `/dividend/{code}` |
 | **4 资金面** | 资金流120日 | ✅ 已实现并验证 | `/fund-flow/daily/{code}` |
 | **5 新闻** | 东财个股新闻 | ✅ 已实现并验证 | `/news/{code}` |
-| **5 新闻** | 财联社快讯 | ✅ 已实现并验证 | `/telegraph` |
+| **5 新闻** | 财联社快讯 | ⚠️ 已下线（#14） | `/telegraph`（改用 `/global-news`） |
 | **5 新闻** | 东财全球资讯 | ✅ 已实现并验证 | `/global-news` |
 | **6 基础** | mootdx 财务快照 | ⚠️ 已接线待TCP | `/finance-snapshot/{code}` |
 | **6 基础** | mootdx F10 | ⚠️ 已接线待TCP | `/f10/{code}` |
@@ -626,11 +626,11 @@ curl "http://localhost:8000/api/v1/billboard/daily"
 # 融资融券
 curl "http://localhost:8000/api/v1/margin/600519"
 
-# 财联社快讯
-curl "http://localhost:8000/api/v1/telegraph"
+# 全球资讯（财联社快讯已下线 #14，改用全球资讯）
+curl "http://localhost:8000/api/v1/global-news"
 
-# 财报三表（利润表）
-curl "http://localhost:8000/api/v1/financial-report/600519?report_type=lrb"
+# 财报三表（利润表，默认取最近 8 期）
+curl "http://localhost:8000/api/v1/financial-report/600519?report_type=lrb&num=8"
 ```
 
 ### AI Skill 模式（自然语言）
@@ -671,8 +671,8 @@ akshare 本质是对东财/同花顺/新浪等公开 API 的封装，中间层�
 **Q: 同花顺热点 reason 字段为空？**
 盘后数据还没更新，15:30 之后再调。个别 ST 股没有人工标注，`dropna` 过滤即可。
 
-**Q: 百度股市通 ResultCode 不稳定？**
-已知坑——有时返回 int `0`，有时返回 string `"0"`。代码里用 `str()` 统一比较即可。
+**Q: 个股板块/概念归属为什么从百度换成东财 slist？**
+百度 PAE `getrelatedblock` 接口 2026-06 失效（实测返回 `ResultCode 10003` + 空数组，#18）。改用东财 `slist`（`spt=3`）个股所属板块接口，一次请求拿全行业/概念/地域混合板块（含 BK 码 + 涨跌幅 + 龙头股），零鉴权。百度仅保留 K 线。
 
 **Q: 北向资金历史只有几天？**
 本地自缓存机制。每次调用 `/northbound` 自动积累历史。`/northbound/history` 读取本地日级缓存，越跑越丰富。
