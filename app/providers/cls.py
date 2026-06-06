@@ -3,7 +3,13 @@ from app.core.errors import UpstreamSchemaError
 
 
 def fetch_cls_telegraph(page_size: int = 50) -> list[dict]:
-    """Fetch real-time telegraph/news from cls.cn (财联社)."""
+    """Fetch real-time telegraph/news from cls.cn (财联社).
+
+    ⚠️ DEPRECATED (#14): cls.cn migrated to Next.js and the legacy public API
+    (``nodeapi/telegraphList``) now returns 404. Use Eastmoney global news
+    (``fetch_global_news`` / ``/global-news``) as the market-wide替代. This function
+    is kept for backward compatibility but is expected to fail against the live site.
+    """
     url = "https://www.cls.cn/nodeapi/telegraphList"
     params = {"rn": str(page_size), "page": "1"}
     headers = {"Referer": "https://www.cls.cn/"}

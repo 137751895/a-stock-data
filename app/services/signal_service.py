@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from app.core.normalize import validate_code
-from app.providers.baidu import fetch_concept_blocks
 from app.providers.eastmoney import (
     fetch_billboard_records,
     fetch_billboard_seats,
+    fetch_concept_blocks,
     fetch_daily_billboard,
     fetch_lockup_expiry,
     fetch_industry_ranking,
@@ -128,9 +128,9 @@ def get_industry_ranking(top_n: int = 20) -> dict:
 
 
 def get_concept_blocks(code: str) -> dict:
-    """Get concept block classification for a stock from Baidu.
+    """Get a stock's board/concept membership from Eastmoney slist (V3.2.2, replaces Baidu).
 
-    Returns: {industry: [...], concept: [...], region: [...], concept_tags: [...]}
+    Returns: {total, boards: [{name, code, change_pct, lead_stock}], concept_tags: [...]}
     """
     code = validate_code(code)
     return fetch_concept_blocks(code)

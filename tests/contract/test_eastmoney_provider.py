@@ -120,3 +120,23 @@ def test_fetch_stock_news():
     assert len(result) == 1
     assert result[0]["title"] == "Test News"  # HTML tags stripped
     assert result[0]["source"] == "Source"
+
+
+@responses.activate
+def test_fetch_stock_news_cms_direct_list():
+    """Eastmoney actually returns cmsArticleWebOld as a list directly (SKILL v3.2.1 §5.1)."""
+    jsonp_response = (
+        'jQuery_news({"result":{"cmsArticleWebOld":'
+        '[{"title":"Real <em>News</em>","content":"Body","date":"2026-06-01",'
+        '"mediaName":"东方财富","url":"http://em.com"}]}})'
+    )
+    responses.add(
+        responses.GET,
+        "https://search-api-web.eastmoney.com/search/jsonp",
+        body=jsonp_response,
+        status=200,
+    )
+    result = fetch_stock_news("600519")
+    assert len(result) == 1
+    assert result[0]["title"] == "Real News"
+    assert result[0]["source"] == "东方财富"

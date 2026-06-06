@@ -203,7 +203,10 @@ def fetch_stock_news(code: str, page_size: int = 20) -> list[dict]:
         raise UpstreamSchemaError(f"Failed to parse JSONP response: {e}", provider="eastmoney")
 
     rows = []
-    articles = d.get("result", {}).get("cmsArticleWebOld", {}).get("list", [])
+    # Eastmoney returns result.cmsArticleWebOld as the article list directly (not a
+    # {"list": [...]} wrapper). Tolerate the legacy nested shape as a fallback. (SKILL v3.2.1 §5.1)
+    raw = d.get("result", {}).get("cmsArticleWebOld", [])
+    articles = raw.get("list", []) if isinstance(raw, dict) else (raw or [])
     for a in articles:
         rows.append({
             "title": re.sub(r'<[^>]+>', '', a.get("title", "")),
@@ -370,3 +373,44 @@ def fetch_global_news(page_size: int = 50) -> list[dict]:
             "time": item.get("showTime", ""),
         })
     return rows
+
+
+def fetch_concept_blocks(code: str) -> dict:
+    """Fetch a stock's board/concept membership from Eastmoney slist (spt=3).
+
+    Replaces the dead Baidu PAE ``getrelatedblock`` endpoint (returned ResultCode
+    10003 + empty array, #18). Eastmoney returns industry/concept/region boards mixed
+    in a single list; the board name is self-describing. (SKILL v3.2.2 §3.3)
+
+    Returns: {total, boards: [{name, code, change_pct, lead_stock}], concept_tags: [name...]}
+    """
+    secid = to_eastmoney_secid(code)
+    url = "https://push2.eastmoney.com/api/qt/slist/get"
+    params = {
+        "fltt": "2", "invt": "2",
+        "secid": secid,
+        "spt": "3", "pi": "0", "pz": "200", "po": "1",
+        "fields": "f12,f14,f3,f128",
+    }
+    headers = {"Referer": "https://quote.eastmoney.com/"}
+    r = http_get(url, params=params, headers=headers, provider="eastmoney")
+    try:
+        d = r.json()
+    except Exception as e:
+        raise UpstreamSchemaError(f"Failed to parse concept blocks response: {e}", provider="eastmoney")
+
+    diff = (d.get("data") or {}).get("diff") or {}
+    items = diff.values() if isinstance(diff, dict) else diff
+    boards = []
+    for it in items:
+        boards.append({
+            "name": it.get("f14", ""),         # 板块名
+            "code": it.get("f12", ""),         # BK 板块代码
+            "change_pct": it.get("f3", ""),    # 板块当日涨跌幅
+            "lead_stock": it.get("f128", ""),  # 板块龙头股
+        })
+    return {
+        "total": len(boards),
+        "boards": boards,
+        "concept_tags": [b["name"] for b in boards],
+    }

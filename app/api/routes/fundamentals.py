@@ -19,8 +19,12 @@ def stock_info(code: str):
 
 
 @router.get("/financial-report/{code}", response_model=ApiResponse)
-def financial_report(code: str, report_type: str = Query("lrb", description="fzb/lrb/llb")):
-    data = get_financial_report(code, report_type)
+def financial_report(
+    code: str,
+    report_type: str = Query("lrb", description="fzb/lrb/llb"),
+    num: int = Query(8, ge=1, le=60, description="Number of most recent reporting periods"),
+):
+    data = get_financial_report(code, report_type, num)
     return success_response(data=data, source=["sina"])
 
 

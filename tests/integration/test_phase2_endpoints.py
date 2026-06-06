@@ -231,9 +231,15 @@ class TestFinancialReportAPI:
         responses.add(
             responses.GET,
             "https://quotes.sina.cn/cn/api/openapi.php/CompanyFinanceService.getFinanceReport2022",
-            json={"result": {"data": {"lrb": [
-                {"报告日": "2025-12-31", "净利润": "86000000000"}
-            ]}}},
+            json={"result": {"data": {"report_list": {
+                "20260331": {"data": [
+                    {"item_title": "净利润", "item_value": "86000000000", "item_tongbi": "12.5"},
+                    {"item_title": "营业收入", "item_value": "120000000000", "item_tongbi": "10.1"},
+                ]},
+                "20251231": {"data": [
+                    {"item_title": "净利润", "item_value": "74000000000", "item_tongbi": "19.0"},
+                ]},
+            }}}},
             status=200,
         )
         response = client.get("/api/v1/financial-report/600519?report_type=lrb")
@@ -241,7 +247,29 @@ class TestFinancialReportAPI:
         data = response.json()
         assert data["success"] is True
         assert data["source"] == ["sina"]
-        assert len(data["data"]) == 1
+        # Two reporting periods, newest first
+        assert len(data["data"]) == 2
+        assert data["data"][0]["报告期"] == "2026-03-31"
+        assert data["data"][0]["净利润"] == "86000000000"
+        assert data["data"][0]["净利润_同比"] == "12.5"
+
+    @responses.activate
+    def test_financial_report_respects_num(self):
+        responses.add(
+            responses.GET,
+            "https://quotes.sina.cn/cn/api/openapi.php/CompanyFinanceService.getFinanceReport2022",
+            json={"result": {"data": {"report_list": {
+                "20260331": {"data": [{"item_title": "净利润", "item_value": "1"}]},
+                "20251231": {"data": [{"item_title": "净利润", "item_value": "2"}]},
+                "20250930": {"data": [{"item_title": "净利润", "item_value": "3"}]},
+            }}}},
+            status=200,
+        )
+        response = client.get("/api/v1/financial-report/600519?report_type=lrb&num=2")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["data"]) == 2
+        assert data["data"][0]["报告期"] == "2026-03-31"
 
     def test_invalid_report_type_returns_400(self):
         response = client.get("/api/v1/financial-report/600519?report_type=xyz")

@@ -10,7 +10,10 @@ def get_stock_news(code: str) -> list[dict]:
 
 
 def get_cls_telegraph() -> list[dict]:
-    """Get real-time telegraph from CLS (财联社)."""
+    """Get real-time telegraph from CLS (财联社).
+
+    ⚠️ Deprecated (#14): cls.cn legacy API is offline; use get_global_news() instead.
+    """
     return fetch_cls_telegraph()
 
 

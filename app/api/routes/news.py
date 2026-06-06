@@ -8,6 +8,7 @@ router = APIRouter()
 
 @router.get("/telegraph", response_model=ApiResponse)
 def telegraph():
+    """⚠️ Deprecated (#14): cls.cn legacy API is offline. Prefer /global-news instead."""
     data = get_cls_telegraph()
     return success_response(data=data, source=["cls"])
 

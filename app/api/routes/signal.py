@@ -42,7 +42,7 @@ def industry_ranking(top_n: int = Query(20, description="Number of top/bottom se
 @router.get("/concept-blocks/{code}", response_model=ApiResponse)
 def concept_blocks(code: str):
     data = get_concept_blocks(code)
-    return success_response(data=data, source=["baidu"])
+    return success_response(data=data, source=["eastmoney"])
 
 
 @router.get("/hot-stocks", response_model=ApiResponse)

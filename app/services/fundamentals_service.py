@@ -24,16 +24,17 @@ def get_stock_info(code: str) -> tuple[dict, bool]:
     return data, False
 
 
-def get_financial_report(code: str, report_type: str = "lrb") -> list[dict]:
+def get_financial_report(code: str, report_type: str = "lrb", num: int = 8) -> list[dict]:
     """Get financial report from Sina (资产负债表/利润表/现金流量表).
 
     report_type: 'fzb', 'lrb', 'llb'
+    num: number of most recent reporting periods to return (default 8)
     """
     code = validate_code(code)
     if report_type not in ("fzb", "lrb", "llb"):
         from app.core.errors import ValidationError
         raise ValidationError(f"Invalid report_type: '{report_type}'. Must be 'fzb', 'lrb', or 'llb'")
-    return fetch_financial_report(code, report_type)
+    return fetch_financial_report(code, report_type, num)
 
 
 def get_finance_snapshot(code: str) -> list[dict]:
